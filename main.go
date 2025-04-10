@@ -58,6 +58,25 @@ func setupLogging() {
 	log.Println("Logging initialized")
 }
 
+// setupCacheCleanup sets up a background goroutine to periodically clean the auth cache
+func setupCacheCleanup(authModule *auth.AuthModule, interval time.Duration) {
+	ticker := time.NewTicker(interval)
+
+	go func() {
+		for range ticker.C {
+			total, valid := authModule.CacheStats()
+			if total > 0 {
+				cleaned := authModule.CleanupCache()
+				if cleaned > 0 {
+					log.Printf("Auth cache stats - Total: %d, Valid: %d, Cleaned: %d", total, valid, cleaned)
+				}
+			}
+		}
+	}()
+
+	log.Printf("Auth cache cleanup initialized with interval: %s", interval)
+}
+
 func main() {
 	// Initialize logging
 	setupLogging()
@@ -71,6 +90,13 @@ func main() {
 	}
 	log.Printf("Configuration loaded successfully. Using port: %d, Auth method: %s", cfg.Port, cfg.MailcowAuthMethod)
 
+	// Log cache configuration
+	if cfg.AuthCacheTTL > 0 {
+		log.Printf("Auth caching enabled with TTL: %d seconds", cfg.AuthCacheTTL)
+	} else {
+		log.Println("Auth caching disabled")
+	}
+
 	// Initialize Mailcow API client
 	log.Printf("Initializing Mailcow API client with URL: %s", cfg.MailcowAdminAPIURL)
 	mailcowClient, err := mailcow.NewMailcowClient(cfg.MailcowAdminAPIURL, cfg.MailcowAdminAPIKey)
@@ -81,11 +107,16 @@ func main() {
 
 	// Initialize authentication module
 	log.Printf("Initializing authentication module with method: %s, server: %s", cfg.MailcowAuthMethod, cfg.MailcowServerAddress)
-	authModule, err := auth.NewAuthModule(cfg.MailcowAuthMethod, cfg.MailcowServerAddress)
+	authModule, err := auth.NewAuthModule(cfg.MailcowAuthMethod, cfg.MailcowServerAddress, cfg.AuthCacheTTL)
 	if err != nil {
 		log.Fatalf("Failed to initialize authentication module: %v", err)
 	}
 	log.Println("Authentication module initialized successfully")
+
+	// Setup cache cleanup if caching is enabled
+	if cfg.AuthCacheTTL > 0 {
+		setupCacheCleanup(authModule, 10*time.Second)
+	}
 
 	// Initialize API
 	log.Println("Initializing API endpoints")
