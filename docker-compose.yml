@@ -11,10 +11,10 @@ services:
       - MAILCOW_SERVER_ADDRESS=
       - ALIAS_VALIDITY_PERIOD=10
       # Template patterns:
-      # Use {words} for random words
+      # Use {words} for random words, {words:3} for 3 words
       # Use {word-chars} for alphanumeric strings starting with a letter
       # Use {chars} for alphanumeric + special chars (.-_) starting with a letter
-      # Use {names}, {firstname}, {lastname}, etc. for name-like strings
-      # Use {words:N}, {word-chars:N}, {chars:N} to specify length
-      # Use %d to include domain from email
+      # Use {names}, {firstname}, {lastname}, {middlename}, {nickname} for name-like strings
+      # Use length controls: {word-chars:8} for exactly 8 chars, {firstname:4,8} for 4-8 chars
+      # Use %d to include domain from user's email
       - ALIAS_GENERATION_PATTERN={firstname}.{lastname}@%d
