@@ -29,8 +29,7 @@ const (
 
 // Template placeholders
 const (
-	RandomStringPlaceholder = "%s"
-	DomainPlaceholder       = "%d"
+	DomainPlaceholder = "%d"
 )
 
 // Generator patterns
@@ -84,6 +83,41 @@ var (
 	// Vowels and consonants for name generation
 	vowels     = []rune{'a', 'e', 'i', 'o', 'u'}
 	consonants = []rune{'b', 'c', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm', 'n', 'p', 'q', 'r', 's', 't', 'v', 'w', 'x', 'y', 'z'}
+
+	// Variables for more natural name generation
+
+	// Common syllables for more English-sounding names
+	commonSyllables = []string{
+		"al", "an", "ar", "as", "ash", "ba", "be", "ben", "ber", "beth", "bi", "ble", "bri",
+		"ca", "car", "ce", "cha", "che", "chi", "chris", "co", "con", "cy",
+		"da", "dan", "de", "di", "do", "don", "dy", "ed", "el", "en", "er", "eth", "ey",
+		"fa", "fe", "fi", "fo", "ford", "fred", "fy", "ga", "ge", "geor", "go", "gor",
+		"ha", "han", "he", "hi", "ho", "hy", "in", "ing", "is", "ja", "jack", "jam", "je", "jen",
+		"ji", "jo", "john", "jon", "ju", "ka", "ke", "ken", "ki", "kin", "la", "le", "len",
+		"li", "lin", "lo", "ly", "ma", "mar", "matt", "me", "mel", "mi", "mich", "mo",
+		"na", "ne", "ni", "nick", "no", "ny", "pa", "pe", "per", "phi", "pi", "po",
+		"ra", "re", "ri", "rich", "rick", "ro", "rob", "ron", "ry",
+		"sa", "sam", "se", "sha", "she", "si", "so", "son", "ste", "ster", "ston",
+		"ta", "te", "ter", "tho", "thom", "ti", "to", "ton", "ty",
+		"va", "ve", "vi", "vic", "vo", "wa", "we", "wil", "win", "wi",
+		"ya", "ye", "yo", "za",
+	}
+
+	// Common English name endings
+	nameEndings = []string{
+		"a", "ah", "an", "ane", "ar", "ard", "as", "ay", "ce", "ch", "ck", "cy", "d", "dan",
+		"don", "dy", "e", "ed", "el", "en", "er", "ers", "es", "ett", "ey", "feld", "ford",
+		"fy", "h", "ia", "ian", "ie", "in", "ing", "ins", "io", "is", "ith", "le", "ley",
+		"lyn", "man", "mer", "n", "na", "ne", "ner", "ney", "nie", "ny", "on", "or", "ry",
+		"s", "son", "ston", "sy", "t", "th", "ton", "ty", "us", "y", "yn",
+	}
+
+	// Common English initial consonant clusters
+	initialConsonantClusters = []string{
+		"bl", "br", "ch", "cl", "cr", "dr", "fl", "fr", "gl", "gr",
+		"pl", "pr", "sc", "sh", "sl", "sm", "sn", "sp", "st", "sw",
+		"th", "tr", "tw", "wh", "wr",
+	}
 )
 
 // RegEx patterns for parsing template options
@@ -121,12 +155,6 @@ func GenerateAlias(email, pattern string) (string, error) {
 	// Replace domain placeholder
 	if strings.Contains(processed, DomainPlaceholder) {
 		processed = strings.Replace(processed, DomainPlaceholder, domain, -1)
-	}
-
-	// Replace legacy random string placeholder for backward compatibility
-	if strings.Contains(processed, RandomStringPlaceholder) {
-		randomString := generateRandomChars(letterChars, defaultWordLength)
-		processed = strings.Replace(processed, RandomStringPlaceholder, randomString, -1)
 	}
 
 	return processed, nil
@@ -436,50 +464,98 @@ func generateName(minLength, maxLength int) string {
 	// Determine a random length between min and max
 	length := randBetween(minLength, maxLength)
 
-	// Names typically start with a consonant
-	var name []rune
-	if randSource.Float64() < 0.7 {
-		name = append(name, consonants[randSource.Intn(len(consonants))])
+	// For more English-sounding names, use a combination of common syllables
+	// and typical English phonetic patterns
+	var result string
+
+	// Start with either a common syllable, an initial consonant cluster, or a single consonant
+	startChoice := randSource.Float64()
+	if startChoice < 0.5 {
+		// Use a common English syllable to start (50% chance)
+		result = commonSyllables[randSource.Intn(len(commonSyllables))]
+	} else if startChoice < 0.8 {
+		// Use a common English initial consonant cluster (30% chance)
+		result = initialConsonantClusters[randSource.Intn(len(initialConsonantClusters))]
+		// Add a vowel after the cluster
+		result += string(vowels[randSource.Intn(len(vowels))])
 	} else {
-		name = append(name, vowels[randSource.Intn(len(vowels))])
+		// Start with a single consonant followed by a vowel (20% chance)
+		result = string(consonants[randSource.Intn(len(consonants))]) +
+			string(vowels[randSource.Intn(len(vowels))])
 	}
 
-	// Alternating patterns of vowels and consonants creates more pronounceable names
-	for len(name) < length {
-		lastIsVowel := isVowel(name[len(name)-1])
-
-		if lastIsVowel {
-			// After a vowel, add a consonant (or sometimes consonant cluster)
-			if randSource.Float64() < 0.2 && len(name)+2 <= length {
-				// Add consonant cluster (two consonants together)
-				name = append(name, consonants[randSource.Intn(len(consonants))])
-				name = append(name, consonants[randSource.Intn(len(consonants))])
-			} else {
-				name = append(name, consonants[randSource.Intn(len(consonants))])
+	// Build the name with English patterns until we're close to the target length
+	for len(result) < length-2 {
+		// 60% chance to add a common English syllable if there's room
+		if randSource.Float64() < 0.6 && len(result)+2 <= length {
+			syllable := commonSyllables[randSource.Intn(len(commonSyllables))]
+			// Make sure we don't exceed the target length
+			if len(result)+len(syllable) <= length {
+				result += syllable
+				continue
 			}
+		}
+
+		// Otherwise add alternating vowels and consonants following English patterns
+		lastChar := []rune(result)[len([]rune(result))-1]
+		if isVowel(lastChar) {
+			// After a vowel, typically a consonant follows
+			result += string(consonants[randSource.Intn(len(consonants))])
 		} else {
-			// After a consonant, add a vowel (or sometimes a vowel sequence)
-			if randSource.Float64() < 0.15 && len(name)+2 <= length {
-				// Add vowel sequence (two vowels together)
-				name = append(name, vowels[randSource.Intn(len(vowels))])
-				name = append(name, vowels[randSource.Intn(len(vowels))])
-			} else {
-				name = append(name, vowels[randSource.Intn(len(vowels))])
+			// After a consonant, typically a vowel follows
+			result += string(vowels[randSource.Intn(len(vowels))])
+		}
+	}
+
+	// Add a typical English ending if we need more characters
+	if len(result) <= length-2 && len(nameEndings) > 0 {
+		// Find a suitable ending that fits
+		for i := 0; i < 5; i++ { // Try up to 5 times to find a fitting ending
+			ending := nameEndings[randSource.Intn(len(nameEndings))]
+			if len(result)+len(ending) <= length {
+				result += ending
+				break
 			}
 		}
 	}
 
-	// Truncate if needed to ensure we don't exceed max length
-	if len(name) > maxLength {
-		name = name[:maxLength]
+	// If we need just one more character
+	if len(result) == length-1 {
+		lastChar := []rune(result)[len([]rune(result))-1]
+		if isVowel(lastChar) {
+			// After a vowel, add a consonant that works well at the end of English names
+			endConsonants := []string{"n", "l", "r", "s", "t", "m", "th", "y"}
+			resultString := endConsonants[randSource.Intn(len(endConsonants))]
+			// Handle special case for 'th'
+			if resultString == "th" {
+				if len(result)+2 <= length {
+					result += "th"
+				} else {
+					result += "t"
+				}
+			} else {
+				result += resultString
+			}
+		} else {
+			// After a consonant, add a vowel that works well at the end of English names
+			endVowels := []rune{'a', 'e', 'i', 'o', 'y'}
+			result += string(endVowels[randSource.Intn(len(endVowels))])
+		}
 	}
 
-	// Capitalize first letter sometimes
-	if randSource.Float64() < 0.5 {
-		name[0] = unicode.ToUpper(name[0])
+	// Trim if too long
+	if len(result) > length {
+		result = result[:length]
 	}
 
-	return string(name)
+	// Capitalize first letter for English names (more common than not)
+	if randSource.Float64() < 0.7 {
+		runes := []rune(result)
+		runes[0] = unicode.ToUpper(runes[0])
+		result = string(runes)
+	}
+
+	return result
 }
 
 // generateNameVariation creates a variation of a name while keeping some similarity
@@ -591,20 +667,6 @@ func generateRandomChars(charset string, length int) string {
 		b[i] = charset[randSource.Intn(len(charset))]
 	}
 	return string(b)
-}
-
-// parseInt safely parses an integer with a default value
-func parseInt(s string, defaultVal int) (int, error) {
-	if s == "" {
-		return defaultVal, nil
-	}
-
-	val, err := strconv.Atoi(s)
-	if err != nil {
-		return defaultVal, err
-	}
-
-	return val, nil
 }
 
 // randBetween returns a random integer between min and max (inclusive)
