@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -13,6 +12,7 @@ import (
 	"git.ruekov.eu/ruakij/simplelogin-mailcow-bridge/internal/alias"
 	"git.ruekov.eu/ruakij/simplelogin-mailcow-bridge/internal/auth"
 	"git.ruekov.eu/ruakij/simplelogin-mailcow-bridge/internal/config"
+	"git.ruekov.eu/ruakij/simplelogin-mailcow-bridge/internal/logger"
 	"git.ruekov.eu/ruakij/simplelogin-mailcow-bridge/internal/mailcow"
 )
 
@@ -22,6 +22,7 @@ type API struct {
 	mailcowClient *mailcow.MailcowClient
 	authModule    *auth.AuthModule
 	router        *mux.Router
+	logger        *logger.Logger
 }
 
 // NewAPI creates a new API handler
@@ -31,6 +32,7 @@ func NewAPI(cfg *config.Config, mailcowClient *mailcow.MailcowClient, authModule
 		mailcowClient: mailcowClient,
 		authModule:    authModule,
 		router:        mux.NewRouter(),
+		logger:        logger.WithComponent("API"),
 	}
 	api.routes()
 	return api
@@ -43,17 +45,20 @@ func (a *API) Router() http.Handler {
 
 func (a *API) routes() {
 	a.router.HandleFunc("/api/alias/random/new", a.handleNewAlias).Methods("POST")
+	a.logger.Debug("Registered route: POST /api/alias/random/new")
 }
 
 func (a *API) handleNewAlias(w http.ResponseWriter, r *http.Request) {
 	requestID := fmt.Sprintf("%d", time.Now().UnixNano())
-	log.Printf("[%s] Processing new alias request", requestID)
+	log := a.logger.WithRequestID(requestID)
+
+	log.Info("Processing new alias request")
 
 	// Get username and password from the Authentication header
 	// Format: "Authentication: username:password"
 	authHeader := r.Header.Get("Authentication")
 	if authHeader == "" {
-		log.Printf("[%s] Authentication failed: No Authentication header provided", requestID)
+		log.Warn("Authentication failed: No Authentication header provided")
 		http.Error(w, "Unauthorized: Authentication header required", http.StatusUnauthorized)
 		return
 	}
@@ -61,7 +66,7 @@ func (a *API) handleNewAlias(w http.ResponseWriter, r *http.Request) {
 	// Split the header value to get username and password
 	credentials := strings.SplitN(authHeader, ":", 2)
 	if len(credentials) != 2 {
-		log.Printf("[%s] Authentication failed: Invalid Authentication header format", requestID)
+		log.Warn("Authentication failed: Invalid Authentication header format")
 		http.Error(w, "Unauthorized: Authentication header must be in the format 'username:password'", http.StatusUnauthorized)
 		return
 	}
@@ -69,46 +74,46 @@ func (a *API) handleNewAlias(w http.ResponseWriter, r *http.Request) {
 	username := credentials[0]
 	password := credentials[1]
 
-	// Mask password in logs
+	// Mask username for logging
 	maskedUser := username
 	if len(maskedUser) > 3 {
 		maskedUser = maskedUser[:3] + "***"
 	}
-	log.Printf("[%s] Authenticating user: %s", requestID, maskedUser)
+	log.Info("Authenticating user: %s", maskedUser)
 
 	// Authenticate user against Mailcow
 	if err := a.authModule.Authenticate(username, password); err != nil {
 		errorMsg := fmt.Sprintf("Authentication failed: %v", err)
-		log.Printf("[%s] %s", requestID, errorMsg)
+		log.Warn("%s", errorMsg)
 		http.Error(w, errorMsg, http.StatusUnauthorized)
 		return
 	}
-	log.Printf("[%s] User %s authenticated successfully", requestID, maskedUser)
+	log.Info("User %s authenticated successfully", maskedUser)
 
 	// Generate alias
-	log.Printf("[%s] Generating alias using pattern: %s", requestID, a.config.AliasGenerationPattern)
+	log.Info("Generating alias using pattern: %s", a.config.AliasGenerationPattern)
 	generatedAlias, err := alias.GenerateAlias(username, a.config.AliasGenerationPattern)
 	if err != nil {
 		errorMsg := fmt.Sprintf("Failed to generate alias: %v", err)
-		log.Printf("[%s] %s", requestID, errorMsg)
+		log.Error("%s", errorMsg)
 		http.Error(w, errorMsg, http.StatusInternalServerError)
 		return
 	}
-	log.Printf("[%s] Generated alias: %s", requestID, generatedAlias)
+	log.Info("Generated alias: %s", generatedAlias)
 
 	// Create alias in Mailcow
-	log.Printf("[%s] Creating alias in Mailcow: %s -> %s", requestID, generatedAlias, maskedUser)
+	log.Info("Creating alias in Mailcow: %s -> %s", generatedAlias, maskedUser)
 	if err := a.mailcowClient.CreateAlias(generatedAlias, username); err != nil {
 		errorMsg := fmt.Sprintf("Failed to create alias in Mailcow: %v", err)
-		log.Printf("[%s] %s", requestID, errorMsg)
+		log.Error("%s", errorMsg)
 		http.Error(w, errorMsg, http.StatusInternalServerError)
 		return
 	}
-	log.Printf("[%s] Alias created successfully in Mailcow", requestID)
+	log.Info("Alias created successfully in Mailcow")
 
 	// Set expiration date
 	expirationDate := time.Now().AddDate(a.config.AliasValidityPeriod, 0, 0).Format(time.RFC3339)
-	log.Printf("[%s] Setting expiration date: %s", requestID, expirationDate)
+	log.Debug("Setting expiration date: %s", expirationDate)
 
 	// Prepare response
 	response := map[string]string{
@@ -119,10 +124,10 @@ func (a *API) handleNewAlias(w http.ResponseWriter, r *http.Request) {
 	// Return response as JSON
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		log.Printf("[%s] Failed to encode response: %v", requestID, err)
+		log.Error("Failed to encode response: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	log.Printf("[%s] Successfully completed new alias request", requestID)
+	log.Info("Successfully completed new alias request")
 }

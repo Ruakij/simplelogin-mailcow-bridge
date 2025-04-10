@@ -12,6 +12,9 @@ services:
       - ALIAS_VALIDITY_PERIOD=10
       # Auth caching configuration
       - AUTH_CACHE_TTL=300  # in seconds, 0 to disable
+      # Logging configuration
+      - LOG_LEVEL=INFO      # Available levels: DEBUG, INFO, WARN, ERROR
+      - LOG_COLOR=true      # Enable/disable colored logs (true/false)
       # Template patterns:
       # Use {words} for random words, {words:3} for 3 words
       # Use {word-chars} for alphanumeric strings starting with a letter

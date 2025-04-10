@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 )
 
 // Config stores the application configuration
@@ -17,6 +18,9 @@ type Config struct {
 	AliasGenerationPattern string
 	// Auth caching configuration
 	AuthCacheTTL int // in seconds, 0 means disabled
+	// Logging configuration
+	LogLevel    string
+	LogColorize bool
 }
 
 // LoadConfig loads the configuration from environment variables
@@ -51,6 +55,19 @@ func LoadConfig() (*Config, error) {
 		}
 	}
 
+	// Logging configuration
+	logLevel := os.Getenv("LOG_LEVEL")
+	if logLevel == "" {
+		logLevel = "INFO" // Default to INFO level if not specified
+	}
+
+	// Log colorization, enabled by default, disable with LOG_COLOR=false
+	logColorize := true
+	logColorStr := os.Getenv("LOG_COLOR")
+	if strings.ToLower(logColorStr) == "false" {
+		logColorize = false
+	}
+
 	cfg := &Config{
 		Port:                   port,
 		MailcowAdminAPIURL:     os.Getenv("MAILCOW_ADMIN_API_URL"),
@@ -60,6 +77,8 @@ func LoadConfig() (*Config, error) {
 		AliasValidityPeriod:    aliasValidityPeriod,
 		AliasGenerationPattern: os.Getenv("ALIAS_GENERATION_PATTERN"),
 		AuthCacheTTL:           authCacheTTL,
+		LogLevel:               logLevel,
+		LogColorize:            logColorize,
 	}
 
 	// Check if required environment variables are set
@@ -73,7 +92,7 @@ func LoadConfig() (*Config, error) {
 		return nil, fmt.Errorf("MAILCOW_SERVER_ADDRESS environment variable not set")
 	}
 	if cfg.AliasGenerationPattern == "" {
-		cfg.AliasGenerationPattern = "squirrel.fenneck@%s" // Default alias generation pattern
+		cfg.AliasGenerationPattern = "{firstname}.{lastname}@%s" // Default alias generation pattern
 	}
 
 	return cfg, nil
