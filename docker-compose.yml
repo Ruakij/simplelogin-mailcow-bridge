@@ -1,0 +1,22 @@
+version: "3.8"
+
+services:
+  simplelogin-mailcow-bridge:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - MAILCOW_ADMIN_API_URL=
+      - MAILCOW_ADMIN_API_KEY=
+      - MAILCOW_AUTH_METHOD=IMAP
+      - MAILCOW_SERVER_ADDRESS=
+      - ALIAS_VALIDITY_PERIOD=10
+      # Template patterns:
+      # Use {words} for random words
+      # Use {word-chars} for alphanumeric strings starting with a letter
+      # Use {chars} for alphanumeric + special chars (.-_) starting with a letter
+      # Use {names}, {firstname}, {lastname}, etc. for name-like strings
+      # Use {words:N}, {word-chars:N}, {chars:N} to specify length
+      # Use %d to include domain from email
+      - ALIAS_GENERATION_PATTERN={firstname}.{lastname}@%d
