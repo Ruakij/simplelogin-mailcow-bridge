@@ -137,26 +137,10 @@ func (c *MailcowClient) CreateAlias(address, gotoAddress string) error {
 	}
 
 	// Validate the response
-	body, err := ioutil.ReadAll(resp.Body)
+	_, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Printf("[%s] Failed to read success response body: %v", requestID, err)
 		return fmt.Errorf("failed to read response body: %w", err)
-	}
-
-	log.Printf("[%s] Response body: %s", requestID, string(body))
-
-	// Try to parse the response to check for any API errors
-	var response map[string]interface{}
-	if err := json.Unmarshal(body, &response); err == nil {
-		if msg, ok := response["msg"].(string); ok && msg != "" {
-			log.Printf("[%s] Mailcow API message: %s", requestID, msg)
-			if msg != "alias_added" && msg != "success" {
-				log.Printf("[%s] Mailcow API returned an error message", requestID)
-				return fmt.Errorf("Mailcow API returned an error: %s", msg)
-			}
-		}
-	} else {
-		log.Printf("[%s] Failed to parse JSON response: %v", requestID, err)
 	}
 
 	log.Printf("[%s] Successfully created alias in Mailcow", requestID)
