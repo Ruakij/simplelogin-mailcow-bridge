@@ -28,11 +28,58 @@ func NewMailcowClient(apiURL, apiKey string) (*MailcowClient, error) {
 		Timeout: 10 * time.Second,
 	}
 
-	return &MailcowClient{
+	mc := &MailcowClient{
 		apiURL:     apiURL,
 		apiKey:     apiKey,
 		httpClient: client,
-	}, nil
+	}
+
+	// Check API connectivity at startup
+	if err := mc.CheckAPIConnectivity(); err != nil {
+		return nil, fmt.Errorf("Mailcow API connectivity check failed: %w", err)
+	}
+
+	return mc, nil
+}
+
+// CheckAPIConnectivity verifies the Mailcow API is accessible
+func (c *MailcowClient) CheckAPIConnectivity() error {
+	requestID := fmt.Sprintf("MCOW-INIT-%d", time.Now().UnixNano())
+	log.Printf("[%s] Checking Mailcow API connectivity at %s", requestID, c.apiURL)
+
+	// Create request to the mailq endpoint
+	req, err := http.NewRequest("GET", c.apiURL+"/api/v1/get/mailq/all", nil)
+	if err != nil {
+		log.Printf("[%s] Failed to create API check request: %v", requestID, err)
+		return fmt.Errorf("failed to create API check request: %w", err)
+	}
+
+	// Set headers
+	req.Header.Set("X-API-Key", c.apiKey)
+
+	// Execute request with timeout
+	startTime := time.Now()
+	resp, err := c.httpClient.Do(req)
+	requestDuration := time.Since(startTime)
+
+	if err != nil {
+		log.Printf("[%s] API connectivity check failed (took %s): %v", requestID, requestDuration, err)
+		return fmt.Errorf("API connectivity check failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	log.Printf("[%s] Received API check response in %s with status code: %d", requestID, requestDuration, resp.StatusCode)
+
+	// Check response status code
+	if resp.StatusCode != http.StatusOK {
+		// Read the response body for error details
+		body, _ := ioutil.ReadAll(resp.Body)
+		log.Printf("[%s] API check failed with status %d: %s", requestID, resp.StatusCode, string(body))
+		return fmt.Errorf("API check failed with status %d", resp.StatusCode)
+	}
+
+	log.Printf("[%s] Mailcow API connectivity check successful", requestID)
+	return nil
 }
 
 // CreateAlias creates a new alias in Mailcow
