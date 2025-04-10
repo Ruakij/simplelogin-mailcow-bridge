@@ -1,0 +1,547 @@
+openapi: 3.1.0
+info:
+  description: >-
+    mailcow is complete e-mailing solution with advanced antispam, antivirus,
+    nice UI and API.
+
+
+    In order to use this API you have to create a API key and add your IP
+    address to the whitelist of allowed IPs this can be done by logging into the
+    Mailcow UI using your admin account, then go to Configuration > Access >
+    Edit administrator details > API. There you will find a collapsed API menu.
+
+
+    There are two types of API keys
+      - The read only key can only be used for all get endpoints
+      - The read write key can be used for all endpoints
+
+  title: mailcow API
+  version: "1.0.0"
+
+servers:
+  - url: /
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+  responses:
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              type:
+                type: string
+                example: error
+              msg:
+                type: string
+                example: authentication failed
+            required:
+              - type
+              - msg
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /api/v1/add/alias:
+    post:
+      responses:
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "200":
+          content:
+            application/json:
+              examples:
+                response:
+                  value:
+                    - log:
+                        - mailbox
+                        - add
+                        - alias
+                        - active: "1"
+                          address: alias@domain.tld
+                          goto: destination@domain.tld
+                        - null
+                      msg:
+                        - alias_added
+                        - alias@domain.tld
+                      type: success
+              schema:
+                properties:
+                  log:
+                    description: contains request object
+                    items: {}
+                    type: array
+                  msg:
+                    items: {}
+                    type: array
+                  type:
+                    enum:
+                      - success
+                      - danger
+                      - error
+                    type: string
+                type: object
+          description: OK
+          headers: {}
+      tags:
+        - Aliases
+      description: >-
+        You may create your own mailbox alias using this action. It takes a JSON
+        object containing a domain informations.
+
+        Only one `goto*` option can be used, for ex. if you want learn as spam,
+        then send just `goto_spam = 1` in request body.
+      operationId: Create alias
+      requestBody:
+        content:
+          application/json:
+            schema:
+              example:
+                active: "1"
+                address: alias@domain.tld
+                goto: destination@domain.tld
+              properties:
+                active:
+                  description: is alias active or not
+                  type: boolean
+                address:
+                  description: 'alias address, for catchall use "@domain.tld"'
+                  type: string
+                goto:
+                  description: "destination address, comma separated"
+                  type: string
+                goto_ham:
+                  description: learn as ham
+                  type: boolean
+                goto_null:
+                  description: silently ignore
+                  type: boolean
+                goto_spam:
+                  description: learn as spam
+                  type: boolean
+                sogo_visible:
+                  description: toggle visibility as selectable sender in SOGo
+                  type: boolean
+              type: object
+      summary: Create alias
+  "/api/v1/get/alias/{id}":
+    get:
+      parameters:
+        - description: id of entry you want to get
+          example: all
+          in: path
+          name: id
+          required: true
+          schema:
+            enum:
+              - all
+              - "1"
+              - "2"
+              - "5"
+              - "10"
+            type: string
+        - description: e.g. api-key-string
+          example: api-key-string
+          in: header
+          name: X-API-Key
+          required: false
+          schema:
+            type: string
+      responses:
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "200":
+          content:
+            application/json:
+              examples:
+                response:
+                  value:
+                    - active: "1"
+                      address: alias@domain.tld
+                      created: "2019-04-04 19:29:49"
+                      domain: domain.tld
+                      goto: destination@domain.tld
+                      id: 6
+                      in_primary_domain: ""
+                      is_catch_all: 0
+                      modified: null
+                      private_comment: null
+                      public_comment: null
+                    - active: "1"
+                      address: "@domain.tld"
+                      created: "2019-04-27 13:42:39"
+                      domain: domain.tld
+                      goto: destination@domain.tld
+                      id: 10
+                      in_primary_domain: ""
+                      is_catch_all: 1
+                      modified: null
+                      private_comment: null
+                      public_comment: null
+          description: OK
+          headers: {}
+      tags:
+        - Aliases
+      description: You can list mailbox aliases existing in system.
+      operationId: Get aliases
+      summary: Get aliases"
+  /api/v1/delete/alias:
+    post:
+      responses:
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "200":
+          content:
+            application/json:
+              examples:
+                response:
+                  value:
+                    - log:
+                        - mailbox
+                        - delete
+                        - alias
+                        - id:
+                            - "6"
+                            - "9"
+                        - null
+                      msg:
+                        - alias_removed
+                        - alias@domain.tld
+                      type: success
+                    - log:
+                        - mailbox
+                        - delete
+                        - alias
+                        - id:
+                            - "6"
+                            - "9"
+                        - null
+                      msg:
+                        - alias_removed
+                        - alias2@domain.tld
+                      type: success
+              schema:
+                properties:
+                  log:
+                    description: contains request object
+                    items: {}
+                    type: array
+                  msg:
+                    items: {}
+                    type: array
+                  type:
+                    enum:
+                      - success
+                      - danger
+                      - error
+                    type: string
+                type: object
+          description: OK
+          headers: {}
+      tags:
+        - Aliases
+      description: You can delete one or more aliases.
+      operationId: Delete alias
+      requestBody:
+        content:
+          application/json:
+            schema:
+              items:
+                example: "6"
+                type: string
+              type: array
+      summary: Delete alias
+  /api/v1/edit/alias:
+    post:
+      responses:
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "200":
+          content:
+            application/json:
+              examples:
+                response:
+                  value:
+                    - log:
+                        - mailbox
+                        - edit
+                        - alias
+                        - active: "1"
+                          address: alias@domain.tld
+                          goto: destination@domain.tld
+                          id:
+                            - "6"
+                          private_comment: private comment
+                          public_comment: public comment
+                        - null
+                      msg:
+                        - alias_modified
+                        - alias@domain.tld
+                      type: success
+              schema:
+                properties:
+                  log:
+                    description: contains request object
+                    items: {}
+                    type: array
+                  msg:
+                    items: {}
+                    type: array
+                  type:
+                    enum:
+                      - success
+                      - danger
+                      - error
+                    type: string
+                type: object
+          description: OK
+          headers: {}
+      tags:
+        - Aliases
+      description: >-
+        You can update one or more aliases per request. You can also send just
+        attributes you want to change
+      operationId: Update alias
+      requestBody:
+        content:
+          application/json:
+            schema:
+              example:
+                attr:
+                  active: "1"
+                  address: alias@domain.tld
+                  goto: destination@domain.tld
+                  private_comment: private comment
+                  public_comment: public comment
+                items: ["6"]
+              properties:
+                attr:
+                  properties:
+                    active:
+                      description: is alias active or not
+                      type: boolean
+                    address:
+                      description: 'alias address, for catchall use "@domain.tld"'
+                      type: string
+                    goto:
+                      description: "destination address, comma separated"
+                      type: string
+                    goto_ham:
+                      description: learn as ham
+                      type: boolean
+                    goto_null:
+                      description: silently ignore
+                      type: boolean
+                    goto_spam:
+                      description: learn as spam
+                      type: boolean
+                    private_comment:
+                      type: string
+                    public_comment:
+                      type: string
+                    sogo_visible:
+                      description: toggle visibility as selectable sender in SOGo
+                      type: boolean
+                  type: object
+                items:
+                  description: contains list of aliases you want update
+                  type: object
+              type: object
+      summary: Update alias
+
+  /api/v1/add/time_limited_alias:
+    post:
+      responses:
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "200":
+          content:
+            application/json:
+              examples:
+                response:
+                  value:
+                    - log:
+                        - mailbox
+                        - add
+                        - time_limited_alias
+                        - address: info@domain.tld
+                          domain: domain.tld
+                        - null
+                      msg:
+                        - mailbox_modified
+                        - info@domain.tld
+                      type: success
+              schema:
+                properties:
+                  log:
+                    description: contains request object
+                    items: {}
+                    type: array
+                  msg:
+                    items: {}
+                    type: array
+                  type:
+                    enum:
+                      - success
+                      - danger
+                      - error
+                    type: string
+                type: object
+          description: OK
+          headers: {}
+      tags:
+        - Aliases
+      description: >-
+        You may create a time limited alias using this action. It takes a JSON
+        object containing a domain and mailbox informations.
+        Mailcow will generate a random alias.
+      operationId: Create time limited alias
+      requestBody:
+        content:
+          application/json:
+            schema:
+              example:
+                username: info@domain.tld
+                domain: domain.tld
+              properties:
+                username:
+                  description: "the mailbox an alias should be created for"
+                  type: string
+                domain:
+                  description: "the domain"
+                  type: string
+              type: object
+      summary: Create time limited alias
+  "/api/v1/get/time_limited_aliases/{mailbox}":
+    get:
+      parameters:
+        - description: mailbox you want to get aliasses from
+          example: domain.tld
+          in: path
+          schema:
+            type: string
+          name: mailbox
+          required: true
+        - description: e.g. api-key-string
+          example: api-key-string
+          in: header
+          name: X-API-Key
+          required: false
+          schema:
+            type: string
+      responses:
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "200":
+          content:
+            application/json:
+              examples:
+                response:
+                  value:
+                    - address: alias@domain.tld
+                      goto: destination@domain.tld
+                      validity: 1668251246
+                      created: "2021-11-12 12:07:26"
+                      modified: null
+          description: OK
+          headers: {}
+      tags:
+        - Aliases
+      description: You can list time limited mailbox aliases existing in system.
+      operationId: Get time limited aliases
+      summary: Get time limited aliases
+#
+# "/api/v1/add/bcc"
+# "/api/v1/add/dkim"
+# "/api/v1/add/dkim_duplicate"
+# "/api/v1/add/domain"
+# "/api/v1/add/domain-admin"
+# "/api/v1/add/domain-policy"
+# "/api/v1/add/fwdhost"
+# "/api/v1/add/mailbox"
+# "/api/v1/add/oauth2-client"
+# "/api/v1/add/recipient_map"
+# "/api/v1/add/relayhost"
+# "/api/v1/add/resource"
+# "/api/v1/add/sso/domain-admin"
+# "/api/v1/add/syncjob"
+# "/api/v1/add/tls-policy-map"
+# "/api/v1/add/transport"
+# "/api/v1/delete/app-passwd"
+# "/api/v1/delete/bcc"
+# "/api/v1/delete/dkim"
+# "/api/v1/delete/domain"
+# "/api/v1/delete/domain-admin"
+# "/api/v1/delete/domain-policy"
+# "/api/v1/delete/domain/tag/{domain}"
+# "/api/v1/delete/fwdhost"
+# "/api/v1/delete/mailbox"
+# "/api/v1/delete/mailbox/tag/{mailbox}"
+# "/api/v1/delete/mailq"
+# "/api/v1/delete/oauth2-client"
+# "/api/v1/delete/qitem"
+# "/api/v1/delete/recipient_map"
+# "/api/v1/delete/relayhost"
+# "/api/v1/delete/resource"
+# "/api/v1/delete/syncjob"
+# "/api/v1/delete/tls-policy-map"
+# "/api/v1/delete/transport"
+# "/api/v1/edit/cors"
+# "/api/v1/edit/da-acl"
+# "/api/v1/edit/domain"
+# "/api/v1/edit/domain-admin"
+# "/api/v1/edit/domain/footer"
+# "/api/v1/edit/fail2ban"
+# "/api/v1/edit/mailbox"
+# "/api/v1/edit/mailbox/custom-attribute"
+# "/api/v1/edit/mailq"
+# "/api/v1/edit/pushover"
+# "/api/v1/edit/quarantine_notification"
+# "/api/v1/edit/rl-domain/"
+# "/api/v1/edit/rl-mbox/"
+# "/api/v1/edit/spam-score/"
+# "/api/v1/edit/syncjob"
+# "/api/v1/edit/user-acl"
+# "/api/v1/get/app-passwd/all/{mailbox}"
+# "/api/v1/get/bcc/{id}"
+# "/api/v1/get/dkim/{domain}"
+# "/api/v1/get/domain-admin/all"
+# "/api/v1/get/domain/{id}"
+# "/api/v1/get/fail2ban"
+# "/api/v1/get/fwdhost/all"
+# "/api/v1/get/logs/acme/{count}"
+# "/api/v1/get/logs/api/{count}"
+# "/api/v1/get/logs/autodiscover/{count}"
+# "/api/v1/get/logs/dovecot/{count}"
+# "/api/v1/get/logs/netfilter/{count}"
+# "/api/v1/get/logs/postfix/{count}"
+# "/api/v1/get/logs/ratelimited/{count}"
+# "/api/v1/get/logs/rspamd-history/{count}"
+# "/api/v1/get/logs/sogo/{count}"
+# "/api/v1/get/logs/watchdog/{count}"
+# "/api/v1/get/mailbox/all/{domain}"
+# "/api/v1/get/mailbox/{id}"
+# "/api/v1/get/mailq/all"
+# "/api/v1/get/oauth2-client/{id}"
+# "/api/v1/get/policy_bl_domain/{domain}"
+# "/api/v1/get/policy_wl_domain/{domain}"
+# "/api/v1/get/quarantine/all"
+# "/api/v1/get/recipient_map/{id}"
+# "/api/v1/get/relayhost/{id}"
+# "/api/v1/get/resource/all"
+# "/api/v1/get/rl-domain/{domain}"
+# "/api/v1/get/rl-mbox/{mailbox}"
+# "/api/v1/get/spam-score/{mailbox}"
+# "/api/v1/get/status/containers"
+# "/api/v1/get/status/version"
+# "/api/v1/get/status/vmail"
+# "/api/v1/get/syncjobs/all/no_log"
+# "/api/v1/get/tls-policy-map/{id}"
+# "/api/v1/get/transport/{id}"
