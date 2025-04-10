@@ -15,7 +15,6 @@ SimpleLogin API implementation for Bitwarden to generate email aliases in Mailco
 - [3. Configuration](#3-configuration)
     - [3.1. Environment Variables](#31-environment-variables)
     - [3.2. Alias Templates](#32-alias-templates)
-      - [3.2.1. Length Control](#321-length-control)
 - [4. Usage](#4-usage)
     - [4.1. Setting up in Mailcow](#41-setting-up-in-mailcow)
     - [4.2. Setting Up in Bitwarden](#42-setting-up-in-bitwarden)
@@ -131,7 +130,7 @@ Variable | Description | Default
 `MAILCOW_AUTH_METHOD` | Method to authenticate users (SMTP or IMAP) | IMAP
 `MAILCOW_SERVER_ADDRESS`* | Address to the Mailcow service used for auth (e.g. mail.example.com:993 for IMAP) | -
 `ALIAS_VALIDITY_PERIOD` | How long aliases remain valid (in years) | 10
-`ALIAS_GENERATION_PATTERN` | Pattern for generating aliases | `squirrel.fenneck@%s`
+`ALIAS_GENERATION_PATTERN` | Pattern for generating aliases | `{firstname}.{lastname}@%d`
 * Required
 
 <br>
@@ -154,7 +153,6 @@ Pattern | Description | Example Output
 `{middlename}` | Random middle name | `Valen`
 `{nickname}` | Random nickname | `Niko`
 `%d` | Domain from user's email | `example.com`
-`%s` | Legacy random string (10 chars) | `aghdkslfoq`
 
 When using multiple name placeholders, they'll be coordinated to have a similar style.
 
@@ -168,8 +166,6 @@ Pattern | Description
 `{chars:6}` | Exactly 6 characters
 `{firstname:5}` | First name of exactly 5 characters
 `{firstname:4,8}` | First name between 4-8 characters
-`{lastname:6,10}` | Last name between 6-10 characters
-`{words:3}` | Exactly 3 words
 
 Examples with length control:
 - `{firstname:4}.{lastname:6}@%d` → `Trev.Nalior@example.com`
