@@ -47,6 +47,7 @@ graph TD
 - Creates time-limited aliases in Mailcow (configurable validity period)
 - Sophisticated template engine for alias generation with length control
 - Support for SMTP and IMAP authentication methods (IMAP by default)
+- Configurable authentication caching to improve performance
 
 <br>
 
@@ -131,6 +132,7 @@ Variable | Description | Default
 `MAILCOW_SERVER_ADDRESS`* | Address to the Mailcow service used for auth (e.g. mail.example.com:993 for IMAP) | -
 `ALIAS_VALIDITY_PERIOD` | How long aliases remain valid (in years) | 10
 `ALIAS_GENERATION_PATTERN` | Pattern for generating aliases | `{firstname}.{lastname}@%d`
+`AUTH_CACHE_TTL` | TTL for cached auth entries in seconds (0 to disable) | 300
 * Required
 
 <br>

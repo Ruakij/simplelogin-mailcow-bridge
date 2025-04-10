@@ -15,6 +15,8 @@ type Config struct {
 	MailcowServerAddress   string
 	AliasValidityPeriod    int
 	AliasGenerationPattern string
+	// Auth caching configuration
+	AuthCacheTTL int // in seconds, 0 means disabled
 }
 
 // LoadConfig loads the configuration from environment variables
@@ -35,6 +37,20 @@ func LoadConfig() (*Config, error) {
 		authMethod = "IMAP" // Default to IMAP if not specified
 	}
 
+	// Auth caching configuration - default to 300 seconds (5 minutes)
+	authCacheTTL := 300
+	authCacheTTLStr := os.Getenv("AUTH_CACHE_TTL")
+
+	// If explicitly set to 0 or empty string, disable cache
+	if authCacheTTLStr == "0" || authCacheTTLStr == "" {
+		authCacheTTL = 0
+	} else if authCacheTTLStr != "" {
+		ttl, err := strconv.Atoi(authCacheTTLStr)
+		if err == nil {
+			authCacheTTL = ttl
+		}
+	}
+
 	cfg := &Config{
 		Port:                   port,
 		MailcowAdminAPIURL:     os.Getenv("MAILCOW_ADMIN_API_URL"),
@@ -43,6 +59,7 @@ func LoadConfig() (*Config, error) {
 		MailcowServerAddress:   os.Getenv("MAILCOW_SERVER_ADDRESS"),
 		AliasValidityPeriod:    aliasValidityPeriod,
 		AliasGenerationPattern: os.Getenv("ALIAS_GENERATION_PATTERN"),
+		AuthCacheTTL:           authCacheTTL,
 	}
 
 	// Check if required environment variables are set
