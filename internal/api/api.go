@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -48,13 +49,25 @@ func (a *API) handleNewAlias(w http.ResponseWriter, r *http.Request) {
 	requestID := fmt.Sprintf("%d", time.Now().UnixNano())
 	log.Printf("[%s] Processing new alias request", requestID)
 
-	// Get username and password from request
-	username, password, ok := r.BasicAuth()
-	if !ok {
-		log.Printf("[%s] Authentication failed: No basic auth credentials provided", requestID)
-		http.Error(w, "Unauthorized: Basic authentication required", http.StatusUnauthorized)
+	// Get username and password from the Authentication header
+	// Format: "Authentication: username:password"
+	authHeader := r.Header.Get("Authentication")
+	if authHeader == "" {
+		log.Printf("[%s] Authentication failed: No Authentication header provided", requestID)
+		http.Error(w, "Unauthorized: Authentication header required", http.StatusUnauthorized)
 		return
 	}
+
+	// Split the header value to get username and password
+	credentials := strings.SplitN(authHeader, ":", 2)
+	if len(credentials) != 2 {
+		log.Printf("[%s] Authentication failed: Invalid Authentication header format", requestID)
+		http.Error(w, "Unauthorized: Authentication header must be in the format 'username:password'", http.StatusUnauthorized)
+		return
+	}
+
+	username := credentials[0]
+	password := credentials[1]
 
 	// Mask password in logs
 	maskedUser := username
