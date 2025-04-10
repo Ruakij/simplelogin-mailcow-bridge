@@ -1,6 +1,6 @@
 services:
   simplelogin-mailcow-bridge:
-    build: .
+    image: ghcr.io/ruakij/simplelogin-mailcow-bridge:latest
     ports:
       - "8080:8080"
     environment:
