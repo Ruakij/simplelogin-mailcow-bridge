@@ -9,6 +9,7 @@ services:
       - MAILCOW_ADMIN_API_KEY=
       - MAILCOW_AUTH_METHOD=IMAP
       - MAILCOW_SERVER_ADDRESS=
+      - CORS_ALLOW_ORIGIN=
       - ALIAS_VALIDITY_PERIOD=10
       # Auth caching configuration
       - AUTH_CACHE_TTL=300  # in seconds, 0 to disable

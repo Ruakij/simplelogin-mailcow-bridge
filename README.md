@@ -74,6 +74,7 @@ Minimal example:
   - MAILCOW_ADMIN_API_URL=https://mail.example.com/api
   - MAILCOW_ADMIN_API_KEY=your-mailcow-api-key
   - MAILCOW_SERVER_ADDRESS=mail.example.com:993  # For IMAP (default)
+  - CORS_ALLOW_ORIGIN=https://your-bitwarden-address/
 ```
 
 3. Run the service:
@@ -133,6 +134,7 @@ Variable | Description | Default
 `ALIAS_VALIDITY_PERIOD` | How long aliases remain valid (in years) | 10
 `ALIAS_GENERATION_PATTERN` | Pattern for generating aliases | `{firstname}.{lastname}@%d`
 `AUTH_CACHE_TTL` | TTL for cached auth entries in seconds (0 to disable) | 300
+`CORS_ALLOW_ORIGIN` | CORS Access-Control-Allow-Origin header value | -
 `LOG_LEVEL` | Log level (DEBUG, INFO, WARN, ERROR) | INFO
 `LOG_COLOR` | Enable colored log output (true/false) | true
 * Required
