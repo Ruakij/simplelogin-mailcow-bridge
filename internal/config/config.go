@@ -97,9 +97,6 @@ func LoadConfig() (*Config, error) {
 	if cfg.AliasGenerationPattern == "" {
 		cfg.AliasGenerationPattern = "{firstname}.{lastname}@%s" // Default alias generation pattern
 	}
-	if cfg.CORSAllowOrigin == "" {
-		return nil, fmt.Errorf("CORS_ALLOW_ORIGIN environment variable not set")
-	}
 
 	return cfg, nil
 }
