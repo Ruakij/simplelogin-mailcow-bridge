@@ -18,6 +18,8 @@ type Config struct {
 	AliasGenerationPattern string
 	// Auth caching configuration
 	AuthCacheTTL int // in seconds, 0 means disabled
+	// CORS configuration
+	CORSAllowOrigin string
 	// Logging configuration
 	LogLevel    string
 	LogColorize bool
@@ -67,7 +69,7 @@ func LoadConfig() (*Config, error) {
 	if strings.ToLower(logColorStr) == "false" {
 		logColorize = false
 	}
-
+	
 	cfg := &Config{
 		Port:                   port,
 		MailcowAdminAPIURL:     os.Getenv("MAILCOW_ADMIN_API_URL"),
@@ -79,6 +81,7 @@ func LoadConfig() (*Config, error) {
 		AuthCacheTTL:           authCacheTTL,
 		LogLevel:               logLevel,
 		LogColorize:            logColorize,
+		CORSAllowOrigin:        os.Getenv("CORS_ALLOW_ORIGIN"),
 	}
 
 	// Check if required environment variables are set
@@ -93,6 +96,9 @@ func LoadConfig() (*Config, error) {
 	}
 	if cfg.AliasGenerationPattern == "" {
 		cfg.AliasGenerationPattern = "{firstname}.{lastname}@%s" // Default alias generation pattern
+	}
+	if cfg.CORSAllowOrigin == "" {
+		return nil, fmt.Errorf("CORS_ALLOW_ORIGIN environment variable not set")
 	}
 
 	return cfg, nil
