@@ -44,7 +44,7 @@ graph TD
 
 - Implements SimpleLogin-compatible API that works with Bitwarden
 - Authenticates users with their existing Mailcow credentials
-- Creates time-limited aliases in Mailcow (configurable validity period)
+- Creates aliases in Mailcow
 - Sophisticated template engine for alias generation with length control
 - Support for SMTP and IMAP authentication methods (IMAP by default)
 - Configurable authentication caching to improve performance
@@ -131,7 +131,6 @@ Variable | Description | Default
 `MAILCOW_ADMIN_API_KEY`* | Mailcow Admin API key | -
 `MAILCOW_AUTH_METHOD` | Method to authenticate users (SMTP or IMAP) | IMAP
 `MAILCOW_SERVER_ADDRESS`* | Address to the Mailcow service used for auth (e.g. mail.example.com:993 for IMAP) | -
-`ALIAS_VALIDITY_PERIOD` | How long aliases remain valid (in years) | 10
 `ALIAS_GENERATION_PATTERN` | Pattern for generating aliases | `{firstname}.{lastname}@%d`
 `AUTH_CACHE_TTL` | TTL for cached auth entries in seconds (0 to disable) | 300
 `CORS_ALLOW_ORIGIN` | CORS Access-Control-Allow-Origin header value | -
