@@ -7,18 +7,24 @@ SimpleLogin API implementation for Bitwarden to generate email aliases in Mailco
 
 <!-- TOC -->
 - [1. Overview](#1-overview)
-    - [1.1. How It Works](#11-how-it-works)
-    - [1.2. Features](#12-features)
+  - [1.1. How It Works](#11-how-it-works)
+  - [1.2. Features](#12-features)
 - [2. Installation](#2-installation)
-    - [2.1. Using Docker Compose](#21-using-docker-compose)
-    - [2.2. From Source](#22-from-source)
+  - [2.1. Using Docker Compose](#21-using-docker-compose)
+    - [2.1.1. Prerequisites](#211-prerequisites)
+    - [2.1.2. Setup](#212-setup)
+  - [2.2. From Source](#22-from-source)
+    - [2.2.1. Prerequisites](#221-prerequisites)
+    - [2.2.2. Building](#222-building)
 - [3. Configuration](#3-configuration)
-    - [3.1. Environment Variables](#31-environment-variables)
-    - [3.2. Alias Templates](#32-alias-templates)
+  - [3.1. Environment Variables](#31-environment-variables)
+  - [3.2. Alias Templates](#32-alias-templates)
+    - [3.2.1. Length Control](#321-length-control)
 - [4. Usage](#4-usage)
-    - [4.1. Setting up in Mailcow](#41-setting-up-in-mailcow)
-    - [4.2. Setting Up in Bitwarden](#42-setting-up-in-bitwarden)
-    - [4.3. Managing Aliases](#43-managing-aliases)
+  - [4.1. Setting up in Mailcow](#41-setting-up-in-mailcow)
+  - [4.2. Setting Up in Bitwarden](#42-setting-up-in-bitwarden)
+    - [4.2.1. Generating Aliases](#421-generating-aliases)
+  - [4.3. Managing Aliases](#43-managing-aliases)
 <!-- /TOC -->
 
 <br>
@@ -71,7 +77,7 @@ graph TD
 
 Minimal example:
 ```yaml
-  - MAILCOW_ADMIN_API_URL=https://mail.example.com/api
+  - MAILCOW_ADMIN_API_URL=https://mail.example.com
   - MAILCOW_ADMIN_API_KEY=your-mailcow-api-key
   - MAILCOW_SERVER_ADDRESS=mail.example.com:993  # For IMAP (default)
   - CORS_ALLOW_ORIGIN=https://your-bitwarden-address/
@@ -108,9 +114,10 @@ go build -o simplelogin-mailcow-bridge
 
 3. Set the required environment variables:
 ```bash
-export MAILCOW_ADMIN_API_URL=https://mail.example.com/api
+export MAILCOW_ADMIN_API_URL=https://mail.example.com
 export MAILCOW_ADMIN_API_KEY=your-mailcow-api-key
 export MAILCOW_SERVER_ADDRESS=mail.example.com:993  # For IMAP (default)
+export MAILCOW_ALIAS_PUBLIC_COMMENT=simplelogin-mailcow-bridge
 ```
 
 4. Run the application:
@@ -131,6 +138,9 @@ Variable | Description | Default
 `MAILCOW_ADMIN_API_KEY`* | Mailcow Admin API key | -
 `MAILCOW_AUTH_METHOD` | Method to authenticate users (SMTP or IMAP) | IMAP
 `MAILCOW_SERVER_ADDRESS`* | Address to the Mailcow service used for auth (e.g. mail.example.com:993 for IMAP) | -
+`MAILCOW_ALIAS_SOGO_VISIBLE` | Create aliases as visible/selectable sender in SOGo (`true`/`false`) | true
+`MAILCOW_ALIAS_ALLOW_SEND_AS` | Update mailbox `sender_acl` to allow sending as generated aliases (`true`/`false`) | true
+`MAILCOW_ALIAS_PUBLIC_COMMENT` | Public comment set on newly created aliases | simplelogin-mailcow-bridge
 `ALIAS_GENERATION_PATTERN` | Pattern for generating aliases | `{firstname}.{lastname}@%d`
 `AUTH_CACHE_TTL` | TTL for cached auth entries in seconds (0 to disable) | 300
 `CORS_ALLOW_ORIGIN` | CORS Access-Control-Allow-Origin header value | -

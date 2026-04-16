@@ -9,13 +9,16 @@ import (
 
 // Config stores the application configuration
 type Config struct {
-	Port                   int
-	MailcowAdminAPIURL     string
-	MailcowAdminAPIKey     string
-	MailcowAuthMethod      string
-	MailcowServerAddress   string
-	AliasValidityPeriod    int
-	AliasGenerationPattern string
+	Port                      int
+	MailcowAdminAPIURL        string
+	MailcowAdminAPIKey        string
+	MailcowAuthMethod         string
+	MailcowServerAddress      string
+	MailcowAliasSOGoVisible   bool
+	MailcowAliasAllowSendAs   bool
+	MailcowAliasPublicComment string
+	AliasValidityPeriod       int
+	AliasGenerationPattern    string
 	// Auth caching configuration
 	AuthCacheTTL int // in seconds, 0 means disabled
 	// CORS configuration
@@ -25,78 +28,87 @@ type Config struct {
 	LogColorize bool
 }
 
+
 // LoadConfig loads the configuration from environment variables
 func LoadConfig() (*Config, error) {
-	port, err := strconv.Atoi(os.Getenv("PORT"))
-	if err != nil {
-		port = 8080 // Default port
+	if err := checkRequiredEnvKeys(
+		"MAILCOW_ADMIN_API_URL",
+		"MAILCOW_ADMIN_API_KEY",
+		"MAILCOW_SERVER_ADDRESS",
+	); err != nil {
+		return nil, err
 	}
 
-	aliasValidityPeriod, err := strconv.Atoi(os.Getenv("ALIAS_VALIDITY_PERIOD"))
-	if err != nil {
-		aliasValidityPeriod = 10 // Default validity period (years)
-	}
-
-	// Get authentication method with IMAP as default
-	authMethod := os.Getenv("MAILCOW_AUTH_METHOD")
-	if authMethod == "" {
-		authMethod = "IMAP" // Default to IMAP if not specified
-	}
-
-	// Auth caching configuration - default to 300 seconds (5 minutes)
-	authCacheTTL := 300
-	authCacheTTLStr := os.Getenv("AUTH_CACHE_TTL")
-
-	// If explicitly set to 0 or empty string, disable cache
-	if authCacheTTLStr == "0" || authCacheTTLStr == "" {
-		authCacheTTL = 0
-	} else if authCacheTTLStr != "" {
-		ttl, err := strconv.Atoi(authCacheTTLStr)
-		if err == nil {
-			authCacheTTL = ttl
-		}
-	}
-
-	// Logging configuration
-	logLevel := os.Getenv("LOG_LEVEL")
-	if logLevel == "" {
-		logLevel = "INFO" // Default to INFO level if not specified
-	}
-
-	// Log colorization, enabled by default, disable with LOG_COLOR=false
-	logColorize := true
-	logColorStr := os.Getenv("LOG_COLOR")
-	if strings.ToLower(logColorStr) == "false" {
-		logColorize = false
-	}
-	
 	cfg := &Config{
-		Port:                   port,
-		MailcowAdminAPIURL:     os.Getenv("MAILCOW_ADMIN_API_URL"),
-		MailcowAdminAPIKey:     os.Getenv("MAILCOW_ADMIN_API_KEY"),
-		MailcowAuthMethod:      authMethod,
-		MailcowServerAddress:   os.Getenv("MAILCOW_SERVER_ADDRESS"),
-		AliasValidityPeriod:    aliasValidityPeriod,
-		AliasGenerationPattern: os.Getenv("ALIAS_GENERATION_PATTERN"),
-		AuthCacheTTL:           authCacheTTL,
-		LogLevel:               logLevel,
-		LogColorize:            logColorize,
-		CORSAllowOrigin:        os.Getenv("CORS_ALLOW_ORIGIN"),
-	}
-
-	// Check if required environment variables are set
-	if cfg.MailcowAdminAPIURL == "" {
-		return nil, fmt.Errorf("MAILCOW_ADMIN_API_URL environment variable not set")
-	}
-	if cfg.MailcowAdminAPIKey == "" {
-		return nil, fmt.Errorf("MAILCOW_ADMIN_API_KEY environment variable not set")
-	}
-	if cfg.MailcowServerAddress == "" {
-		return nil, fmt.Errorf("MAILCOW_SERVER_ADDRESS environment variable not set")
-	}
-	if cfg.AliasGenerationPattern == "" {
-		cfg.AliasGenerationPattern = "{firstname}.{lastname}@%s" // Default alias generation pattern
+		Port:                      getEnvInt("PORT", 8080),
+		MailcowAdminAPIURL:        getEnvString("MAILCOW_ADMIN_API_URL", ""),
+		MailcowAdminAPIKey:        getEnvString("MAILCOW_ADMIN_API_KEY", ""),
+		MailcowAuthMethod:         getEnvString("MAILCOW_AUTH_METHOD", "IMAP"),
+		MailcowServerAddress:      getEnvString("MAILCOW_SERVER_ADDRESS", ""),
+		MailcowAliasSOGoVisible:   getEnvBool("MAILCOW_ALIAS_SOGO_VISIBLE", true),
+		MailcowAliasAllowSendAs:   getEnvBool("MAILCOW_ALIAS_ALLOW_SEND_AS", true),
+		MailcowAliasPublicComment: getEnvString("MAILCOW_ALIAS_PUBLIC_COMMENT", "simplelogin-mailcow-bridge"),
+		AliasValidityPeriod:       getEnvInt("ALIAS_VALIDITY_PERIOD", 10),
+		AliasGenerationPattern:    getEnvString("ALIAS_GENERATION_PATTERN", "{firstname}.{lastname}@%d"),
+		AuthCacheTTL:              getEnvInt("AUTH_CACHE_TTL", 300),
+		LogLevel:                  getEnvString("LOG_LEVEL", "INFO"),
+		LogColorize:               getEnvBool("LOG_COLOR", true),
+		CORSAllowOrigin:           getEnvString("CORS_ALLOW_ORIGIN", ""),
 	}
 
 	return cfg, nil
+}
+
+// Helper functions
+func getEnvString(key, defaultValue string) string {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return defaultValue
+	}
+
+	return value
+}
+
+func getEnvInt(key string, defaultValue int) int {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return defaultValue
+	}
+
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return defaultValue
+	}
+
+	return parsed
+}
+
+func getEnvBool(key string, defaultValue bool) bool {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return defaultValue
+	}
+
+	parsed, err := strconv.ParseBool(value)
+	if err != nil {
+		return defaultValue
+	}
+
+	return parsed
+}
+
+func checkRequiredEnvKeys(keys ...string) error {
+	missingKeys := make([]string, 0)
+
+	for _, key := range keys {
+		if strings.TrimSpace(os.Getenv(key)) == "" {
+			missingKeys = append(missingKeys, key)
+		}
+	}
+
+	if len(missingKeys) > 0 {
+		return fmt.Errorf("required environment variables not set: %s", strings.Join(missingKeys, ", "))
+	}
+
+	return nil
 }

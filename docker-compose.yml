@@ -9,6 +9,9 @@ services:
       - MAILCOW_ADMIN_API_KEY=
       - MAILCOW_AUTH_METHOD=IMAP
       - MAILCOW_SERVER_ADDRESS=
+      - MAILCOW_ALIAS_SOGO_VISIBLE=false
+      - MAILCOW_ALIAS_ALLOW_SEND_AS=false
+      - MAILCOW_ALIAS_PUBLIC_COMMENT=simplelogin-mailcow-bridge
       - CORS_ALLOW_ORIGIN=
       - ALIAS_VALIDITY_PERIOD=10
       # Auth caching configuration

@@ -122,12 +122,23 @@ func (a *API) handleNewAlias(w http.ResponseWriter, r *http.Request) {
 
 	// Create alias in Mailcow
 	log.Info("Creating alias in Mailcow: %s -> %s", generatedAlias, maskedUser)
-	if err := a.mailcowClient.CreateAlias(generatedAlias, username); err != nil {
+	if err := a.mailcowClient.CreateAlias(generatedAlias, username, a.config.MailcowAliasSOGoVisible, a.config.MailcowAliasPublicComment); err != nil {
 		errorMsg := fmt.Sprintf("Failed to create alias in Mailcow: %v", err)
 		log.Error("%s", errorMsg)
 		http.Error(w, errorMsg, http.StatusInternalServerError)
 		return
 	}
+
+	if a.config.MailcowAliasAllowSendAs {
+		log.Info("Updating mailbox sender ACL to allow send-as for alias: %s", generatedAlias)
+		if err := a.mailcowClient.AllowMailboxToSendAsAlias(username, generatedAlias); err != nil {
+			errorMsg := fmt.Sprintf("Failed to update sender ACL for alias send-as: %v", err)
+			log.Error("%s", errorMsg)
+			http.Error(w, errorMsg, http.StatusInternalServerError)
+			return
+		}
+	}
+
 	log.Info("Alias created successfully in Mailcow")
 
 	// Set expiration date
