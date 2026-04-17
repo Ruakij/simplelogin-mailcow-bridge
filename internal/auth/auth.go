@@ -72,10 +72,7 @@ func (a *AuthModule) Authenticate(username, password string) error {
 	log := a.logger.WithRequestID(requestID)
 
 	// Mask username for logging
-	maskedUser := username
-	if len(maskedUser) > 3 {
-		maskedUser = maskedUser[:3] + "***"
-	}
+	maskedUser := logger.Mask(username, 0.25)
 
 	// Check cache if enabled (TTL > 0)
 	if a.IsCacheEnabled() {

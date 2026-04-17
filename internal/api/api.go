@@ -94,10 +94,7 @@ func (a *API) handleNewAlias(w http.ResponseWriter, r *http.Request) {
 	password := credentials[1]
 
 	// Mask username for logging
-	maskedUser := username
-	if len(maskedUser) > 3 {
-		maskedUser = maskedUser[:3] + "***"
-	}
+	maskedUser := logger.Mask(username, 0.25)
 	log.Info("Authenticating user: %s", maskedUser)
 
 	// Authenticate user against Mailcow
@@ -118,10 +115,11 @@ func (a *API) handleNewAlias(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, errorMsg, http.StatusInternalServerError)
 		return
 	}
-	log.Info("Generated alias: %s", generatedAlias)
+	maskedGeneratedAlias := logger.Mask(generatedAlias, 0.25)
+	log.Info("Generated alias: %s", maskedGeneratedAlias)
 
 	// Create alias in Mailcow
-	log.Info("Creating alias in Mailcow: %s -> %s", generatedAlias, maskedUser)
+	log.Info("Creating alias in Mailcow: %s -> %s", maskedGeneratedAlias, maskedUser)
 	if err := a.mailcowClient.CreateAlias(generatedAlias, username, a.config.MailcowAliasSOGoVisible, a.config.MailcowAliasPublicComment); err != nil {
 		errorMsg := fmt.Sprintf("Failed to create alias in Mailcow: %v", err)
 		log.Error("%s", errorMsg)
@@ -130,7 +128,7 @@ func (a *API) handleNewAlias(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if a.config.MailcowAliasAllowSendAs {
-		log.Info("Updating mailbox sender ACL to allow send-as for alias: %s", generatedAlias)
+		log.Info("Updating mailbox sender ACL to allow send-as for alias: %s", maskedGeneratedAlias)
 		if err := a.mailcowClient.AllowMailboxToSendAsAlias(username, generatedAlias); err != nil {
 			errorMsg := fmt.Sprintf("Failed to update sender ACL for alias send-as: %v", err)
 			log.Error("%s", errorMsg)

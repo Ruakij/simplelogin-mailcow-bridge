@@ -85,6 +85,44 @@ func parseLevel(level string) int {
 	}
 }
 
+// Mask returns a safely masked representation of data for logs.
+//
+// If the input contains an email address, only the local part is masked and the
+// domain is preserved.
+func Mask(data string, percent float64) string {
+	if data == "" {
+		return ""
+	}
+
+	if at := strings.IndexByte(data, '@'); at > 0 {
+		local := data[:at]
+		domain := data[at:]
+		return Mask(local, percent) + domain
+	}
+
+	if percent <= 0 {
+		percent = 0.5
+	}
+	if percent > 1 {
+		percent = 1
+	}
+
+	length := len(data)
+	if length <= 2 {
+		return strings.Repeat("*", length)
+	}
+
+	keep := int(float64(length) * (1 - percent))
+	if keep < 1 {
+		keep = 1
+	}
+	if keep > length-1 {
+		keep = length - 1
+	}
+
+	return data[:keep] + "***"
+}
+
 // WithComponent creates a new logger with a specific component name
 func (l *Logger) WithComponent(component string) *Logger {
 	newLogger := &Logger{
