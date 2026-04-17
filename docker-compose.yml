@@ -13,7 +13,6 @@ services:
       - MAILCOW_ALIAS_ALLOW_SEND_AS=false
       - MAILCOW_ALIAS_PUBLIC_COMMENT=simplelogin-mailcow-bridge
       - CORS_ALLOW_ORIGIN=
-      - ALIAS_VALIDITY_PERIOD=10
       # Auth caching configuration
       - AUTH_CACHE_TTL=300  # in seconds, 0 to disable
       # Logging configuration

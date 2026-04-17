@@ -139,14 +139,10 @@ func (a *API) handleNewAlias(w http.ResponseWriter, r *http.Request) {
 
 	log.Info("Alias created successfully in Mailcow")
 
-	// Set expiration date
-	expirationDate := time.Now().AddDate(a.config.AliasValidityPeriod, 0, 0).Format(time.RFC3339)
-	log.Debug("Setting expiration date: %s", expirationDate)
-
 	// Prepare response
 	response := map[string]string{
 		"alias":           generatedAlias,
-		"expiration_date": expirationDate,
+		"expiration_date": time.Now().AddDate(10, 0, 0).Format(time.RFC3339), // Fixed +10 years expiration for simplicity, we cannot use temp aliases in Mailcow via external Api
 	}
 
 	// Return response as JSON

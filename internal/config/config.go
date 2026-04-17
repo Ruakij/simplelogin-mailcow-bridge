@@ -48,7 +48,6 @@ func LoadConfig() (*Config, error) {
 		MailcowAliasSOGoVisible:   getEnvBool("MAILCOW_ALIAS_SOGO_VISIBLE", true),
 		MailcowAliasAllowSendAs:   getEnvBool("MAILCOW_ALIAS_ALLOW_SEND_AS", true),
 		MailcowAliasPublicComment: getEnvString("MAILCOW_ALIAS_PUBLIC_COMMENT", "simplelogin-mailcow-bridge"),
-		AliasValidityPeriod:       getEnvInt("ALIAS_VALIDITY_PERIOD", 10),
 		AliasGenerationPattern:    getEnvString("ALIAS_GENERATION_PATTERN", "{firstname}.{lastname}@%d"),
 		AuthCacheTTL:              getEnvInt("AUTH_CACHE_TTL", 300),
 		LogLevel:                  getEnvString("LOG_LEVEL", "INFO"),
