@@ -1,0 +1,1652 @@
+openapi: 3.1.0
+info:
+  title: SimpleLogin API (Upstream Reference)
+  version: "master-docs-reference"
+  summary: Reference OpenAPI built from upstream SimpleLogin API documentation
+  description: >-
+    Reference specification derived from upstream documentation at
+    `simple-login/app/docs/api.md`.
+
+    This file is intended for internal reference in this repository and may lag
+    behind upstream implementation details.
+
+externalDocs:
+  description: Upstream API documentation source
+  url: https://raw.githubusercontent.com/simple-login/app/master/docs/api.md
+
+servers:
+  - url: /
+    description: Local development server
+  - url: https://app.simplelogin.io
+    description: Official Simplelogin server
+
+tags:
+  - name: Account
+  - name: Aliases
+  - name: Mailboxes
+  - name: Custom Domains
+  - name: Contacts
+  - name: Notifications
+  - name: Settings
+  - name: Import/Export
+  - name: Misc
+  - name: Phone
+
+paths:
+  /api/auth/login:
+    post:
+      tags: [Account]
+      security: []
+      summary: Authenticate with email/password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthLoginRequest"
+      responses:
+        "200":
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResult"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/auth/mfa:
+    post:
+      tags: [Account]
+      security: []
+      summary: Complete MFA authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthMfaRequest"
+      responses:
+        "200":
+          description: MFA authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResult"
+
+  /api/auth/facebook:
+    post:
+      tags: [Account]
+      security: []
+      deprecated: true
+      summary: Authenticate with Facebook token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthFacebookRequest"
+      responses:
+        "200":
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResult"
+
+  /api/auth/google:
+    post:
+      tags: [Account]
+      security: []
+      deprecated: true
+      summary: Authenticate with Google token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthGoogleRequest"
+      responses:
+        "200":
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResult"
+
+  /api/auth/register:
+    post:
+      tags: [Account]
+      security: []
+      summary: Register a new account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthRegisterRequest"
+      responses:
+        "200":
+          description: Activation code email sent
+
+  /api/auth/activate:
+    post:
+      tags: [Account]
+      security: []
+      summary: Activate account with email/code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthActivateRequest"
+      responses:
+        "200":
+          description: Account activated
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "410":
+          description: Too many failed attempts; reactivation required
+
+  /api/auth/reactivate:
+    post:
+      tags: [Account]
+      security: []
+      summary: Request a new activation code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthReactivateRequest"
+      responses:
+        "200":
+          description: Activation code email sent
+
+  /api/auth/forgot_password:
+    post:
+      tags: [Account]
+      security: []
+      summary: Request password reset email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthForgotPasswordRequest"
+      responses:
+        "200":
+          description: Request accepted (always 200 upstream)
+
+  /api/user_info:
+    get:
+      tags: [Account]
+      summary: Get user profile information
+      responses:
+        "200":
+          description: User info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserInfo"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    patch:
+      tags: [Account]
+      summary: Update user profile information
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserInfoPatchRequest"
+      responses:
+        "200":
+          description: Updated user info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserInfo"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/stats:
+    get:
+      tags: [Account]
+      summary: Get account alias/email statistics
+      responses:
+        "200":
+          description: Usage stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/sudo:
+    patch:
+      tags: [Account]
+      summary: Enable sudo mode
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordRequest"
+      responses:
+        "200":
+          description: Sudo enabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/user:
+    delete:
+      tags: [Account]
+      summary: Delete current user (requires sudo mode)
+      responses:
+        "200":
+          description: Account scheduled for deletion
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "440":
+          $ref: "#/components/responses/NeedSudo"
+
+  /api/user/cookie_token:
+    get:
+      tags: [Account]
+      summary: Get one-time token for web cookie exchange
+      responses:
+        "200":
+          description: Cookie exchange token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/api_key:
+    post:
+      tags: [Account]
+      summary: Create a new API key
+      description: Accepts Authentication header or existing authenticated web cookie.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApiKeyCreateRequest"
+      responses:
+        "201":
+          description: API key created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiKeyResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/logout:
+    get:
+      tags: [Account]
+      summary: Log out current session
+      description: Accepts Authentication header or existing authenticated web cookie.
+      responses:
+        "200":
+          description: Logged out
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/v5/alias/options:
+    get:
+      tags: [Aliases]
+      summary: Get alias creation options and recommendations
+      parameters:
+        - $ref: "#/components/parameters/Hostname"
+      responses:
+        "200":
+          description: Alias options
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AliasOptionsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/v3/alias/custom/new:
+    post:
+      tags: [Aliases]
+      summary: Create a custom alias
+      parameters:
+        - $ref: "#/components/parameters/Hostname"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AliasCustomCreateRequest"
+      responses:
+        "201":
+          description: Alias created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Alias"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/alias/random/new:
+    post:
+      tags: [Aliases]
+      summary: Create a random alias
+      parameters:
+        - $ref: "#/components/parameters/Hostname"
+        - $ref: "#/components/parameters/Mode"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AliasRandomCreateRequest"
+      responses:
+        "201":
+          description: Alias created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Alias"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/v2/aliases:
+    get:
+      tags: [Aliases]
+      summary: List aliases (paginated)
+      parameters:
+        - $ref: "#/components/parameters/PageId"
+        - $ref: "#/components/parameters/Pinned"
+        - $ref: "#/components/parameters/Disabled"
+        - $ref: "#/components/parameters/Enabled"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query:
+                  type: string
+      responses:
+        "200":
+          description: Alias list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AliasListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags: [Aliases]
+      summary: List aliases (POST variant for clients that cannot send GET body)
+      parameters:
+        - $ref: "#/components/parameters/PageId"
+        - $ref: "#/components/parameters/Pinned"
+        - $ref: "#/components/parameters/Disabled"
+        - $ref: "#/components/parameters/Enabled"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query:
+                  type: string
+      responses:
+        "200":
+          description: Alias list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AliasListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/aliases/{alias_id}:
+    get:
+      tags: [Aliases]
+      summary: Get alias details
+      parameters:
+        - $ref: "#/components/parameters/AliasId"
+      responses:
+        "200":
+          description: Alias
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Alias"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    patch:
+      tags: [Aliases]
+      summary: Update alias details
+      parameters:
+        - $ref: "#/components/parameters/AliasId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AliasPatchRequest"
+      responses:
+        "200":
+          description: Alias updated
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    delete:
+      tags: [Aliases]
+      summary: Delete alias
+      parameters:
+        - $ref: "#/components/parameters/AliasId"
+      responses:
+        "200":
+          description: Alias deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeletedResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/aliases/{alias_id}/toggle:
+    post:
+      tags: [Aliases]
+      summary: Toggle alias enabled/disabled status
+      parameters:
+        - $ref: "#/components/parameters/AliasId"
+      responses:
+        "200":
+          description: New alias status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnabledResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/aliases/{alias_id}/activities:
+    get:
+      tags: [Aliases]
+      summary: Get alias activities
+      parameters:
+        - $ref: "#/components/parameters/AliasId"
+        - $ref: "#/components/parameters/PageId"
+      responses:
+        "200":
+          description: Activity list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AliasActivitiesResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/aliases/{alias_id}/contacts:
+    get:
+      tags: [Aliases]
+      summary: Get alias contacts
+      parameters:
+        - $ref: "#/components/parameters/AliasId"
+        - $ref: "#/components/parameters/PageId"
+      responses:
+        "200":
+          description: Contact list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AliasContactsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags: [Aliases]
+      summary: Create alias contact
+      parameters:
+        - $ref: "#/components/parameters/AliasId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContactCreateRequest"
+      responses:
+        "201":
+          description: Contact created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contact"
+        "200":
+          description: Contact already existed (existed=true)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contact"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/v2/mailboxes:
+    get:
+      tags: [Mailboxes]
+      summary: List user mailboxes
+      responses:
+        "200":
+          description: Mailbox list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MailboxesResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/mailboxes:
+    post:
+      tags: [Mailboxes]
+      summary: Create mailbox
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MailboxCreateRequest"
+      responses:
+        "201":
+          description: Mailbox created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MailboxCreateResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/mailboxes/{mailbox_id}:
+    delete:
+      tags: [Mailboxes]
+      summary: Delete mailbox
+      parameters:
+        - $ref: "#/components/parameters/MailboxId"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MailboxDeleteRequest"
+      responses:
+        "200":
+          description: Mailbox deleted
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    put:
+      tags: [Mailboxes]
+      summary: Update mailbox
+      parameters:
+        - $ref: "#/components/parameters/MailboxId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MailboxUpdateRequest"
+      responses:
+        "200":
+          description: Mailbox updated
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/custom_domains:
+    get:
+      tags: [Custom Domains]
+      summary: List custom domains
+      responses:
+        "200":
+          description: Custom domains
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CustomDomain"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/custom_domains/{custom_domain_id}:
+    patch:
+      tags: [Custom Domains]
+      summary: Update custom domain
+      parameters:
+        - $ref: "#/components/parameters/CustomDomainId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomDomainPatchRequest"
+      responses:
+        "200":
+          description: Updated custom domain
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomDomain"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/custom_domains/{custom_domain_id}/trash:
+    get:
+      tags: [Custom Domains]
+      summary: Get deleted aliases for custom domain
+      parameters:
+        - $ref: "#/components/parameters/CustomDomainId"
+      responses:
+        "200":
+          description: Deleted aliases
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeletedAliasesResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/contacts/{contact_id}:
+    delete:
+      tags: [Contacts]
+      summary: Delete contact
+      parameters:
+        - $ref: "#/components/parameters/ContactId"
+      responses:
+        "200":
+          description: Contact deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeletedResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/contacts/{contact_id}/toggle:
+    post:
+      tags: [Contacts]
+      summary: Block/unblock contact forwarding
+      parameters:
+        - $ref: "#/components/parameters/ContactId"
+      responses:
+        "200":
+          description: New block_forward value
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BlockForwardResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/notifications:
+    get:
+      tags: [Notifications]
+      summary: List notifications
+      parameters:
+        - $ref: "#/components/parameters/NotificationsPage"
+      responses:
+        "200":
+          description: Notifications
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/notifications/{notification_id}:
+    post:
+      tags: [Notifications]
+      summary: Mark notification as read
+      parameters:
+        - $ref: "#/components/parameters/NotificationId"
+      responses:
+        "200":
+          description: Notification updated
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/setting:
+    get:
+      tags: [Settings]
+      summary: Get user settings
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Setting"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    patch:
+      tags: [Settings]
+      summary: Update user settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SettingPatchRequest"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Setting"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/v2/setting/domains:
+    get:
+      tags: [Settings]
+      summary: Get domains allowed for random alias creation
+      responses:
+        "200":
+          description: Domain list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SettingDomain"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/export/data:
+    get:
+      tags: [Import/Export]
+      summary: Export user data
+      responses:
+        "200":
+          description: Exported data payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExportDataResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/export/aliases:
+    get:
+      tags: [Import/Export]
+      summary: Export aliases as CSV
+      responses:
+        "200":
+          description: CSV export
+          content:
+            text/csv:
+              schema:
+                type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/apple/process_payment:
+    post:
+      tags: [Misc]
+      summary: Process Apple receipt payment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppleProcessPaymentRequest"
+      responses:
+        "200":
+          description: Payment processed
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/phone/reservations/{reservation_id}:
+    get:
+      tags: [Phone]
+      summary: Get phone reservation messages
+      parameters:
+        - $ref: "#/components/parameters/ReservationId"
+      responses:
+        "200":
+          description: Reservation messages
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PhoneReservationResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+components:
+  securitySchemes:
+    AuthenticationHeader:
+      type: apiKey
+      in: header
+      name: Authentication
+      description: API key ("API Code") provided by SimpleLogin.
+
+  parameters:
+    Hostname:
+      name: hostname
+      in: query
+      required: false
+      description: Optional website hostname to improve alias suggestions.
+      schema:
+        type: string
+      example: www.example.com
+
+    Mode:
+      name: mode
+      in: query
+      required: false
+      description: Random alias generation mode.
+      schema:
+        type: string
+        enum: [uuid, word]
+
+    AliasId:
+      name: alias_id
+      in: path
+      required: true
+      schema:
+        type: integer
+
+    MailboxId:
+      name: mailbox_id
+      in: path
+      required: true
+      schema:
+        type: integer
+
+    CustomDomainId:
+      name: custom_domain_id
+      in: path
+      required: true
+      schema:
+        type: integer
+
+    ContactId:
+      name: contact_id
+      in: path
+      required: true
+      schema:
+        type: integer
+
+    NotificationId:
+      name: notification_id
+      in: path
+      required: true
+      schema:
+        type: integer
+
+    ReservationId:
+      name: reservation_id
+      in: path
+      required: true
+      schema:
+        type: string
+
+    PageId:
+      name: page_id
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+
+    NotificationsPage:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+
+    Pinned:
+      name: pinned
+      in: query
+      required: false
+      description: Return only pinned aliases (mutually exclusive with disabled/enabled).
+      schema:
+        type: boolean
+
+    Disabled:
+      name: disabled
+      in: query
+      required: false
+      description: Return only disabled aliases (mutually exclusive with pinned/enabled).
+      schema:
+        type: boolean
+
+    Enabled:
+      name: enabled
+      in: query
+      required: false
+      description: Return only enabled aliases (mutually exclusive with pinned/disabled).
+      schema:
+        type: boolean
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+      example:
+        error: request body cannot be empty
+
+    OkResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+      required: [ok]
+      example:
+        ok: true
+
+    AuthLoginRequest:
+      type: object
+      required: [email, password, device]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        device:
+          type: string
+
+    AuthMfaRequest:
+      type: object
+      required: [mfa_token, mfa_key, device]
+      properties:
+        mfa_token:
+          type: string
+        mfa_key:
+          type: string
+        device:
+          type: string
+
+    AuthFacebookRequest:
+      type: object
+      required: [facebook_token, device]
+      properties:
+        facebook_token:
+          type: string
+        device:
+          type: string
+
+    AuthGoogleRequest:
+      type: object
+      required: [google_token, device]
+      properties:
+        google_token:
+          type: string
+        device:
+          type: string
+
+    AuthRegisterRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    AuthActivateRequest:
+      type: object
+      required: [email, code]
+      properties:
+        email:
+          type: string
+          format: email
+        code:
+          type: string
+
+    AuthReactivateRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+
+    AuthForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+
+    AuthResult:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        mfa_enabled:
+          type: boolean
+        mfa_key:
+          type: [string, "null"]
+        api_key:
+          type: [string, "null"]
+
+    UserInfo:
+      type: object
+      properties:
+        name:
+          type: string
+        is_premium:
+          type: boolean
+        email:
+          type: string
+          format: email
+        in_trial:
+          type: boolean
+        trial_end_timestamp:
+          type: [integer, "null"]
+        profile_picture_url:
+          type: [string, "null"]
+        max_alias_free_plan:
+          type: integer
+
+    UserInfoPatchRequest:
+      type: object
+      properties:
+        profile_picture:
+          type: [string, "null"]
+          description: Base64 image; null removes current picture.
+        name:
+          type: string
+
+    StatsResponse:
+      type: object
+      properties:
+        nb_alias:
+          type: integer
+        nb_block:
+          type: integer
+        nb_forward:
+          type: integer
+        nb_reply:
+          type: integer
+      required: [nb_alias, nb_block, nb_forward, nb_reply]
+
+    PasswordRequest:
+      type: object
+      required: [password]
+      properties:
+        password:
+          type: string
+
+    TokenResponse:
+      type: object
+      properties:
+        token:
+          type: string
+      required: [token]
+
+    ApiKeyCreateRequest:
+      type: object
+      required: [device]
+      properties:
+        device:
+          type: string
+
+    ApiKeyResponse:
+      type: object
+      properties:
+        api_key:
+          type: string
+      required: [api_key]
+
+    AliasSuffix:
+      type: object
+      properties:
+        signed_suffix:
+          type: string
+        suffix:
+          type: string
+        is_custom:
+          type: boolean
+        is_premium:
+          type: boolean
+      required: [signed_suffix, suffix, is_custom, is_premium]
+
+    AliasRecommendation:
+      type: object
+      properties:
+        alias:
+          type: string
+        hostname:
+          type: string
+      required: [alias, hostname]
+
+    AliasOptionsResponse:
+      type: object
+      properties:
+        can_create:
+          type: boolean
+        prefix_suggestion:
+          type: string
+        suffixes:
+          type: array
+          items:
+            $ref: "#/components/schemas/AliasSuffix"
+        recommendation:
+          oneOf:
+            - $ref: "#/components/schemas/AliasRecommendation"
+            - type: "null"
+      required: [can_create, prefix_suggestion, suffixes]
+
+    AliasMailbox:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+          format: email
+      required: [id, email]
+
+    AliasLatestActivityContact:
+      type: object
+      properties:
+        email:
+          type: string
+        name:
+          type: [string, "null"]
+        reverse_alias:
+          type: string
+      required: [email, reverse_alias]
+
+    AliasLatestActivity:
+      type: object
+      properties:
+        action:
+          type: string
+          enum: [forward, reply, block, bounced]
+        timestamp:
+          type: integer
+        contact:
+          $ref: "#/components/schemas/AliasLatestActivityContact"
+      required: [action, timestamp, contact]
+
+    Alias:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+          format: email
+        name:
+          type: [string, "null"]
+        enabled:
+          type: boolean
+        creation_date:
+          type: string
+        creation_timestamp:
+          type: integer
+        note:
+          type: [string, "null"]
+        nb_block:
+          type: integer
+        nb_forward:
+          type: integer
+        nb_reply:
+          type: integer
+        support_pgp:
+          type: boolean
+        disable_pgp:
+          type: boolean
+        mailbox:
+          $ref: "#/components/schemas/AliasMailbox"
+        mailboxes:
+          type: array
+          items:
+            $ref: "#/components/schemas/AliasMailbox"
+        latest_activity:
+          oneOf:
+            - $ref: "#/components/schemas/AliasLatestActivity"
+            - type: "null"
+        pinned:
+          type: boolean
+      required: [id, email, enabled, creation_timestamp, nb_block, nb_forward, nb_reply, mailboxes]
+
+    AliasListResponse:
+      type: object
+      properties:
+        aliases:
+          type: array
+          items:
+            $ref: "#/components/schemas/Alias"
+      required: [aliases]
+
+    AliasCustomCreateRequest:
+      type: object
+      required: [alias_prefix, signed_suffix, mailbox_ids]
+      properties:
+        alias_prefix:
+          type: string
+        signed_suffix:
+          type: string
+        mailbox_ids:
+          type: array
+          items:
+            type: integer
+        note:
+          type: string
+        name:
+          type: string
+
+    AliasRandomCreateRequest:
+      type: object
+      properties:
+        note:
+          type: string
+
+    AliasPatchRequest:
+      type: object
+      properties:
+        note:
+          type: string
+        mailbox_id:
+          type: integer
+        name:
+          type: string
+        mailbox_ids:
+          type: array
+          items:
+            type: integer
+        disable_pgp:
+          type: boolean
+        pinned:
+          type: boolean
+
+    DeletedResponse:
+      type: object
+      properties:
+        deleted:
+          type: boolean
+      required: [deleted]
+
+    EnabledResponse:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+      required: [enabled]
+
+    AliasActivity:
+      type: object
+      properties:
+        action:
+          type: string
+        from:
+          type: string
+        to:
+          type: string
+        timestamp:
+          type: integer
+        reverse_alias:
+          type: string
+        reverse_alias_address:
+          type: string
+      required: [action, timestamp]
+
+    AliasActivitiesResponse:
+      type: object
+      properties:
+        activities:
+          type: array
+          items:
+            $ref: "#/components/schemas/AliasActivity"
+      required: [activities]
+
+    Contact:
+      type: object
+      properties:
+        id:
+          type: integer
+        contact:
+          type: string
+        creation_date:
+          type: string
+        creation_timestamp:
+          type: integer
+        last_email_sent_date:
+          type: [string, "null"]
+        last_email_sent_timestamp:
+          type: [integer, "null"]
+        reverse_alias:
+          type: string
+        reverse_alias_address:
+          type: [string, "null"]
+        block_forward:
+          type: boolean
+        existed:
+          type: boolean
+
+    AliasContactsResponse:
+      type: object
+      properties:
+        contacts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Contact"
+      required: [contacts]
+
+    ContactCreateRequest:
+      type: object
+      required: [contact]
+      properties:
+        contact:
+          type: string
+
+    BlockForwardResponse:
+      type: object
+      properties:
+        block_forward:
+          type: boolean
+      required: [block_forward]
+
+    Mailbox:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+          format: email
+        default:
+          type: boolean
+        creation_timestamp:
+          type: integer
+        nb_alias:
+          type: integer
+        verified:
+          type: boolean
+      required: [id, email, default, creation_timestamp, nb_alias, verified]
+
+    MailboxesResponse:
+      type: object
+      properties:
+        mailboxes:
+          type: array
+          items:
+            $ref: "#/components/schemas/Mailbox"
+      required: [mailboxes]
+
+    MailboxCreateRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+
+    MailboxCreateResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+          format: email
+        verified:
+          type: boolean
+        default:
+          type: boolean
+      required: [id, email, verified, default]
+
+    MailboxDeleteRequest:
+      type: object
+      properties:
+        transfer_aliases_to:
+          type: integer
+          description: New mailbox id for aliases; -1 or omitted deletes aliases.
+
+    MailboxUpdateRequest:
+      type: object
+      properties:
+        default:
+          type: boolean
+        email:
+          type: string
+          format: email
+        cancel_email_change:
+          type: boolean
+
+    CustomDomain:
+      type: object
+      properties:
+        catch_all:
+          type: boolean
+        creation_date:
+          type: string
+        creation_timestamp:
+          type: integer
+        domain_name:
+          type: string
+        id:
+          type: integer
+        is_verified:
+          type: boolean
+        mailboxes:
+          type: array
+          items:
+            $ref: "#/components/schemas/AliasMailbox"
+        name:
+          type: [string, "null"]
+        nb_alias:
+          type: integer
+        random_prefix_generation:
+          type: boolean
+      required: [id, domain_name, is_verified, mailboxes]
+
+    CustomDomainPatchRequest:
+      type: object
+      properties:
+        catch_all:
+          type: boolean
+        random_prefix_generation:
+          type: boolean
+        name:
+          type: string
+        mailbox_ids:
+          type: array
+          items:
+            type: integer
+
+    DeletedAlias:
+      type: object
+      properties:
+        alias:
+          type: string
+        deletion_timestamp:
+          type: integer
+      required: [alias, deletion_timestamp]
+
+    DeletedAliasesResponse:
+      type: object
+      properties:
+        aliases:
+          type: array
+          items:
+            $ref: "#/components/schemas/DeletedAlias"
+      required: [aliases]
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: [string, "null"]
+        message:
+          type: string
+        read:
+          type: boolean
+        created_at:
+          type: string
+      required: [id, message, read, created_at]
+
+    NotificationsResponse:
+      type: object
+      properties:
+        more:
+          type: boolean
+        notifications:
+          type: array
+          items:
+            $ref: "#/components/schemas/Notification"
+      required: [more, notifications]
+
+    Setting:
+      type: object
+      properties:
+        alias_generator:
+          type: string
+          enum: [uuid, word]
+        notification:
+          type: boolean
+        random_alias_default_domain:
+          type: string
+        sender_format:
+          type: string
+          enum: [AT, A, NAME_ONLY, AT_ONLY, NO_NAME]
+        random_alias_suffix:
+          type: string
+          enum: [word, random_string]
+      required: [alias_generator, notification, random_alias_default_domain, sender_format, random_alias_suffix]
+
+    SettingPatchRequest:
+      type: object
+      properties:
+        alias_generator:
+          type: string
+          enum: [uuid, word]
+        notification:
+          type: boolean
+        random_alias_default_domain:
+          type: string
+        sender_format:
+          type: string
+          enum: [AT, A, NAME_ONLY, AT_ONLY, NO_NAME]
+        random_alias_suffix:
+          type: string
+          enum: [word, random_string]
+
+    SettingDomain:
+      type: object
+      properties:
+        domain:
+          type: string
+        is_custom:
+          type: boolean
+      required: [domain, is_custom]
+
+    AppleProcessPaymentRequest:
+      type: object
+      required: [receipt_data]
+      properties:
+        receipt_data:
+          type: string
+        is_macapp:
+          type: boolean
+
+    PhoneMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+        body:
+          type: string
+        created_at:
+          type: string
+        from_number:
+          type: string
+      required: [id, body, created_at, from_number]
+
+    PhoneReservationResponse:
+      type: object
+      properties:
+        ended:
+          type: boolean
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/PhoneMessage"
+      required: [ended, messages]
+
+    ExportDataResponse:
+      type: object
+      additionalProperties: true
+      description: Upstream describes this as exported account data payload.
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    Unauthorized:
+      description: Invalid or missing API key
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    NeedSudo:
+      description: Sudo mode required (non-standard 440 status used upstream)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+security:
+  - AuthenticationHeader: []
+

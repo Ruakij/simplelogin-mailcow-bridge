@@ -1,0 +1,144 @@
+openapi: 3.1.0
+info:
+  title: SimpleLogin-Mailcow Bridge API
+  version: "1.0.0"
+  summary: SimpleLogin-compatible alias generation bridge for Mailcow
+  description: >-
+    This service implements a focused subset of the SimpleLogin API used by
+    Bitwarden for random alias generation.
+
+    Important compatibility notes:
+      - Upstream SimpleLogin expects an API key in `Authentication`.
+      - This bridge expects `Authentication: <mailbox_email>:<mailbox_password>`
+        and authenticates those credentials against Mailcow (IMAP/SMTP).
+      - Upstream often returns `201` with a full alias object.
+      - This bridge currently returns `200` with `{ alias, expiration_date }`.
+
+externalDocs:
+  description: Upstream SimpleLogin API reference
+  url: https://raw.githubusercontent.com/simple-login/app/master/docs/api.md
+
+servers:
+  - url: localhost:8080
+    description: Local development server
+
+tags:
+  - name: Aliases
+    description: SimpleLogin-compatible alias generation
+
+paths:
+  /api/alias/random/new:
+    post:
+      tags:
+        - Aliases
+      summary: Create a random alias
+      description: >-
+        Creates a new Mailcow alias for the authenticated mailbox using the
+        configured alias generation pattern.
+
+        Compatible with the SimpleLogin random alias endpoint used by Bitwarden.
+      operationId: createRandomAlias
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RandomAliasRequest"
+      responses:
+        "200":
+          description: Alias created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RandomAliasResponse"
+              examples:
+                success:
+                  value:
+                    alias: brightocean@example.com
+                    expiration_date: 2036-04-17T10:30:00Z
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+components:
+  securitySchemes:
+    AuthenticationHeader:
+      type: apiKey
+      in: header
+      name: Authentication
+      description: >-
+        Mailbox credentials in format `<email>:<password>`. This differs from
+        upstream SimpleLogin where `Authentication` contains an API key.
+
+  responses:
+    Unauthorized:
+      description: Missing/invalid credentials or failed Mailcow authentication.
+      content:
+        text/plain:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            missingHeader:
+              value: "Unauthorized: Authentication header required"
+            badHeaderFormat:
+              value: >-
+                Unauthorized: Authentication header must be in the format
+                'username:password'
+            authFailed:
+              value: "Authentication failed: IMAP authentication failed"
+    InternalServerError:
+      description: Alias generation or Mailcow API error.
+      content:
+        text/plain:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            generateError:
+              value: "Failed to generate alias: invalid email format"
+            createAliasError:
+              value: "Failed to create alias in Mailcow: failed to create alias"
+            senderAclError:
+              value: "Failed to update sender ACL for alias send-as: request failed"
+
+  schemas:
+    RandomAliasRequest:
+      type: object
+      description: Request body accepted for compatibility with SimpleLogin clients.
+      properties:
+        note:
+          type: string
+          description: Optional alias note for upstream compatibility.
+      additionalProperties: true
+
+    RandomAliasResponse:
+      type: object
+      required:
+        - alias
+        - expiration_date
+      properties:
+        alias:
+          type: string
+          description: Generated alias address
+          format: email
+          example: vividtiger@example.com
+        expiration_date:
+          type: string
+          format: date-time
+          description: >-
+            Synthetic expiration date currently set to now + 10 years by the bridge as Mailcow API doesnt support expiration dates for aliases.
+            This is included for compatibility with the SimpleLogin API response expected by Bitwarden.
+          example: 2036-04-17T10:30:00Z
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+      example:
+        error: "Unauthorized: Authentication header required"
+
+security:
+  - AuthenticationHeader: []
+
