@@ -2,6 +2,7 @@ package alias
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 )
 
@@ -85,6 +86,19 @@ func TestGenerateNames(t *testing.T) {
 
 	// Skip actual assertions since this is a demonstration test
 	// The test will pass as long as no errors occur during generation
+}
+
+func TestGenerateAliasWithWordAndNumbers(t *testing.T) {
+	email := "user@example.com"
+	alias, err := GenerateAlias(email, "{word:5}.{numbers:2}@%d")
+	if err != nil {
+		t.Fatalf("failed to generate alias: %v", err)
+	}
+
+	re := regexp.MustCompile(`^[a-z]{5}\.[0-9]{2}@example\.com$`)
+	if !re.MatchString(alias) {
+		t.Fatalf("expected lowercase alias with 5 letters and 2 digits, got %s", alias)
+	}
 }
 
 func TestRandomWordGeneration(t *testing.T) {

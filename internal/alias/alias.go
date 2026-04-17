@@ -17,6 +17,7 @@ const (
 	defaultWordLength    = 10
 	defaultCharLength    = 10
 	defaultWordCount     = 1
+	defaultNumberLength  = 2
 )
 
 // Generator types
@@ -24,6 +25,8 @@ const (
 	TypeWords     = "words"
 	TypeWordChars = "word-chars"
 	TypeChars     = "chars"
+	TypeWord      = "word"
+	TypeNumbers   = "numbers"
 	TypeNames     = "names"
 )
 
@@ -35,8 +38,10 @@ const (
 // Generator patterns
 const (
 	WordsPattern     = "{words}"
+	WordPattern      = "{word}"
 	WordCharsPattern = "{word-chars}"
 	CharsPattern     = "{chars}"
+	NumbersPattern   = "{numbers}"
 	NamesPattern     = "{names}"
 	// Add sub-patterns for name types
 	FirstNamePattern  = "{firstname}"
@@ -153,9 +158,10 @@ func GenerateAlias(email, pattern string) (string, error) {
 	processed = replaceTemplateVariables(processed, nameValues)
 
 	// Replace domain placeholder
-	if strings.Contains(processed, DomainPlaceholder) {
-		processed = strings.Replace(processed, DomainPlaceholder, domain, -1)
-	}
+	processed = strings.Replace(processed, DomainPlaceholder, domain, -1)
+
+	// Always return lowercase aliases for consistency
+	processed = strings.ToLower(processed)
 
 	return processed, nil
 }
@@ -334,6 +340,12 @@ func replaceTemplateVariables(pattern string, nameValues map[string]string) stri
 		case "chars":
 			length := randBetween(minLength, maxLength)
 			replacement = generateChars(length)
+		case "word":
+			length := randBetween(minLength, maxLength)
+			replacement = generateWord(length)
+		case "numbers":
+			length := randBetween(minLength, maxLength)
+			replacement = generateNumbers(length)
 		case "firstname", "lastname", "middlename", "nickname", "names":
 			// These are handled in the nameValues map, but we need to handle any that weren't processed
 			// Generate a new name with the specified length constraints
@@ -364,6 +376,11 @@ func processSimplePatterns(pattern string) string {
 			continue
 		}
 
+		if strings.Contains(result, WordPattern) {
+			result = strings.Replace(result, WordPattern, generateWord(defaultWordLength), 1)
+			continue
+		}
+
 		if strings.Contains(result, WordCharsPattern) {
 			result = strings.Replace(result, WordCharsPattern, generateWordChars(defaultWordLength), 1)
 			continue
@@ -371,6 +388,11 @@ func processSimplePatterns(pattern string) string {
 
 		if strings.Contains(result, CharsPattern) {
 			result = strings.Replace(result, CharsPattern, generateChars(defaultCharLength), 1)
+			continue
+		}
+
+		if strings.Contains(result, NumbersPattern) {
+			result = strings.Replace(result, NumbersPattern, generateNumbers(defaultNumberLength), 1)
 			continue
 		}
 
@@ -412,6 +434,35 @@ func generateWords(count int) string {
 	}
 
 	return strings.Join(words, separator)
+}
+
+// generateWord generates one lowercase word with a specified length
+func generateWord(length int) string {
+	if length <= 0 {
+		length = defaultWordLength
+	}
+
+	candidates := make([]string, 0, len(commonNouns)+len(adjectives))
+	for _, word := range append(commonNouns, adjectives...) {
+		if len(word) == length {
+			candidates = append(candidates, word)
+		}
+	}
+
+	if len(candidates) > 0 {
+		return candidates[randSource.Intn(len(candidates))]
+	}
+
+	return generateRandomChars(letterChars, length)
+}
+
+// generateNumbers generates a random string of digits of the specified length
+func generateNumbers(length int) string {
+	if length <= 0 {
+		length = defaultNumberLength
+	}
+
+	return generateRandomChars(numberChars, length)
 }
 
 // generateWordChars generates a random string with word-chars (letters and numbers, starting with letter)

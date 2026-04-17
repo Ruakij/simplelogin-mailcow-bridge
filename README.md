@@ -156,17 +156,20 @@ The bridge supports a sophisticated template engine for generating aliases. You 
 
 Pattern | Description | Example Output
 --------|------------|---------------
+`{word}` | Random lowercase word of exact length N | `ocean`
 `{words}` | Random word or word combination | `brightocean`
 `{words:N}` | N random words with separator | `royal.tiger.mountain`
 `{word-chars}` | Alphanumeric string starting with a letter | `t5k7bs1q9p`
 `{word-chars:N}` | Alphanumeric string of length N | `g8b2p5`
 `{chars}` | String with letters, numbers, and special chars | `k4p-r2.n_b1`
 `{chars:N}` | String with special chars of length N | `p3j_a8`
-`{names}` | Random realistic-looking name | `Melito`
-`{firstname}` | Random first name | `Kevan`
-`{lastname}` | Random last name | `Tiros`
-`{middlename}` | Random middle name | `Valen`
-`{nickname}` | Random nickname | `Niko`
+`{numbers}` | Random numeric string | `42`
+`{numbers:N}` | Numeric string of length N | `27`
+`{names}` | Random realistic-looking name | `melito`
+`{firstname}` | Random first name | `kevan`
+`{lastname}` | Random last name | `tiros`
+`{middlename}` | Random middle name | `valen`
+`{nickname}` | Random nickname | `niko`
 `%d` | Domain from user's email | `example.com`
 
 When using multiple name placeholders, they'll be coordinated to have a similar style.
