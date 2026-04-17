@@ -36,6 +36,9 @@ paths:
         Creates a new Mailcow alias for the authenticated mailbox using the
         configured alias generation pattern.
 
+        Optional `email_domain` can override alias domain/localpart for this
+        single request.
+
         Compatible with the SimpleLogin random alias endpoint used by Bitwarden.
       operationId: createRandomAlias
       requestBody:
@@ -56,6 +59,8 @@ paths:
                   value:
                     alias: brightocean@example.com
                     expiration_date: 2036-04-17T10:30:00Z
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "500":
@@ -72,6 +77,19 @@ components:
         upstream SimpleLogin where `Authentication` contains an API key.
 
   responses:
+    BadRequest:
+      description: Invalid JSON body or invalid/disallowed `email_domain` override.
+      content:
+        text/plain:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            invalidJson:
+              value: "Bad request: invalid JSON body: unexpected EOF"
+            invalidDomain:
+              value: "Bad request: email_domain override is invalid"
+            regexMismatch:
+              value: "Bad request: email_domain override does not match configured pre-generation regex"
     Unauthorized:
       description: Missing/invalid credentials or failed Mailcow authentication.
       content:
@@ -104,11 +122,26 @@ components:
   schemas:
     RandomAliasRequest:
       type: object
-      description: Request body accepted for compatibility with SimpleLogin clients.
+      description: >-
+        Request body accepted for compatibility with SimpleLogin clients.
+        The bridge supports optional Bitwarden-style override via `email_domain`.
       properties:
         note:
           type: string
           description: Optional alias note for upstream compatibility.
+        email_domain:
+          type: string
+          description: >-
+            Optional pre-generation override input with three supported modes:
+              - `domain` (for example `example.org`): override generated alias domain.
+              - `localpart` (for example `support@`): use this localpart with the
+                authenticated mailbox domain.
+              - `localpart@domain` (for example `support@example.org`): override
+                both localpart and domain.
+
+            If `ALIAS_EMAIL_DOMAIN_OVERRIDE_PRE_GENERATION_REGEX` is configured,
+            this raw value is validated against that regex before any alias
+            generation or splitting happens.
       additionalProperties: true
 
     RandomAliasResponse:
@@ -141,4 +174,3 @@ components:
 
 security:
   - AuthenticationHeader: []
-

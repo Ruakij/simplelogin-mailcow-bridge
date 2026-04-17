@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -18,11 +19,12 @@ import (
 
 // API is the API handler
 type API struct {
-	config        *config.Config
-	mailcowClient *mailcow.MailcowClient
-	authModule    *auth.AuthModule
-	router        *mux.Router
-	logger        *logger.Logger
+	config           *config.Config
+	mailcowClient    *mailcow.MailcowClient
+	authModule       *auth.AuthModule
+	router           *mux.Router
+	logger           *logger.Logger
+	emailDomainRegex *regexp.Regexp // nil if not configured
 }
 
 // NewAPI creates a new API handler
@@ -33,6 +35,10 @@ func NewAPI(cfg *config.Config, mailcowClient *mailcow.MailcowClient, authModule
 		authModule:    authModule,
 		router:        mux.NewRouter(),
 		logger:        logger.WithComponent("API"),
+	}
+
+	if cfg.AliasEmailDomainOverridePreGenerationRegex != "" {
+		api.emailDomainRegex = regexp.MustCompile(cfg.AliasEmailDomainOverridePreGenerationRegex)
 	}
 
 	if cfg.CORSAllowOrigin != "" {
@@ -106,9 +112,27 @@ func (a *API) handleNewAlias(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Info("User %s authenticated successfully", maskedUser)
 
+	// Parse optional request body
+	req, err := decodeAliasRequest(r)
+	if err != nil {
+		log.Warn("Bad request: %v", err)
+		badRequest(w, err)
+		return
+	}
+
+	pattern, err := a.effectivePattern(req)
+	if err != nil {
+		log.Warn("email_domain override rejected: %v", err)
+		badRequest(w, err)
+		return
+	}
+	if req.EmailDomain != "" {
+		log.Info("Applied email_domain override, effective pattern: %s", pattern)
+	}
+
 	// Generate alias
-	log.Info("Generating alias using pattern: %s", a.config.AliasGenerationPattern)
-	generatedAlias, err := alias.GenerateAlias(username, a.config.AliasGenerationPattern)
+	log.Info("Generating alias using pattern: %s", pattern)
+	generatedAlias, err := alias.GenerateAlias(username, pattern)
 	if err != nil {
 		errorMsg := fmt.Sprintf("Failed to generate alias: %v", err)
 		log.Error("%s", errorMsg)

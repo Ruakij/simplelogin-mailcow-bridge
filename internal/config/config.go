@@ -3,22 +3,24 @@ package config
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 )
 
 // Config stores the application configuration
 type Config struct {
-	Port                      int
-	MailcowAdminAPIURL        string
-	MailcowAdminAPIKey        string
-	MailcowAuthMethod         string
-	MailcowServerAddress      string
-	MailcowAliasSOGoVisible   bool
-	MailcowAliasAllowSendAs   bool
-	MailcowAliasPublicComment string
-	AliasValidityPeriod       int
-	AliasGenerationPattern    string
+	Port                                       int
+	MailcowAdminAPIURL                         string
+	MailcowAdminAPIKey                         string
+	MailcowAuthMethod                          string
+	MailcowServerAddress                       string
+	MailcowAliasSOGoVisible                    bool
+	MailcowAliasAllowSendAs                    bool
+	MailcowAliasPublicComment                  string
+	AliasValidityPeriod                        int
+	AliasGenerationPattern                     string
+	AliasEmailDomainOverridePreGenerationRegex string
 	// Auth caching configuration
 	AuthCacheTTL int // in seconds, 0 means disabled
 	// CORS configuration
@@ -27,7 +29,6 @@ type Config struct {
 	LogLevel    string
 	LogColorize bool
 }
-
 
 // LoadConfig loads the configuration from environment variables
 func LoadConfig() (*Config, error) {
@@ -40,19 +41,26 @@ func LoadConfig() (*Config, error) {
 	}
 
 	cfg := &Config{
-		Port:                      getEnvInt("PORT", 8080),
-		MailcowAdminAPIURL:        getEnvString("MAILCOW_ADMIN_API_URL", ""),
-		MailcowAdminAPIKey:        getEnvString("MAILCOW_ADMIN_API_KEY", ""),
-		MailcowAuthMethod:         getEnvString("MAILCOW_AUTH_METHOD", "IMAP"),
-		MailcowServerAddress:      getEnvString("MAILCOW_SERVER_ADDRESS", ""),
-		MailcowAliasSOGoVisible:   getEnvBool("MAILCOW_ALIAS_SOGO_VISIBLE", true),
-		MailcowAliasAllowSendAs:   getEnvBool("MAILCOW_ALIAS_ALLOW_SEND_AS", true),
-		MailcowAliasPublicComment: getEnvString("MAILCOW_ALIAS_PUBLIC_COMMENT", "simplelogin-mailcow-bridge"),
-		AliasGenerationPattern:    getEnvString("ALIAS_GENERATION_PATTERN", "{firstname}.{lastname}@%d"),
-		AuthCacheTTL:              getEnvInt("AUTH_CACHE_TTL", 300),
-		LogLevel:                  getEnvString("LOG_LEVEL", "INFO"),
-		LogColorize:               getEnvBool("LOG_COLOR", true),
-		CORSAllowOrigin:           getEnvString("CORS_ALLOW_ORIGIN", ""),
+		Port:                                       getEnvInt("PORT", 8080),
+		MailcowAdminAPIURL:                         getEnvString("MAILCOW_ADMIN_API_URL", ""),
+		MailcowAdminAPIKey:                         getEnvString("MAILCOW_ADMIN_API_KEY", ""),
+		MailcowAuthMethod:                          getEnvString("MAILCOW_AUTH_METHOD", "IMAP"),
+		MailcowServerAddress:                       getEnvString("MAILCOW_SERVER_ADDRESS", ""),
+		MailcowAliasSOGoVisible:                    getEnvBool("MAILCOW_ALIAS_SOGO_VISIBLE", true),
+		MailcowAliasAllowSendAs:                    getEnvBool("MAILCOW_ALIAS_ALLOW_SEND_AS", true),
+		MailcowAliasPublicComment:                  getEnvString("MAILCOW_ALIAS_PUBLIC_COMMENT", "simplelogin-mailcow-bridge"),
+		AliasGenerationPattern:                     getEnvString("ALIAS_GENERATION_PATTERN", "{firstname}.{lastname}@%d"),
+		AliasEmailDomainOverridePreGenerationRegex: getEnvString("ALIAS_EMAIL_DOMAIN_OVERRIDE_PRE_GENERATION_REGEX", ""),
+		AuthCacheTTL:                               getEnvInt("AUTH_CACHE_TTL", 300),
+		LogLevel:                                   getEnvString("LOG_LEVEL", "INFO"),
+		LogColorize:                                getEnvBool("LOG_COLOR", true),
+		CORSAllowOrigin:                            getEnvString("CORS_ALLOW_ORIGIN", ""),
+	}
+
+	if cfg.AliasEmailDomainOverridePreGenerationRegex != "" {
+		if _, err := regexp.Compile(cfg.AliasEmailDomainOverridePreGenerationRegex); err != nil {
+			return nil, fmt.Errorf("invalid ALIAS_EMAIL_DOMAIN_OVERRIDE_PRE_GENERATION_REGEX: %w", err)
+		}
 	}
 
 	return cfg, nil

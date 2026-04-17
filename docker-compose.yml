@@ -26,3 +26,5 @@ services:
       # Use length controls: {word-chars:8} for exactly 8 chars, {firstname:4,8} for 4-8 chars
       # Use %d to include domain from user's email
       - ALIAS_GENERATION_PATTERN={firstname}.{lastname}@%d
+      # Optional regex to allow raw email_domain override values before generation/parsing
+      - ALIAS_EMAIL_DOMAIN_OVERRIDE_PRE_GENERATION_REGEX=

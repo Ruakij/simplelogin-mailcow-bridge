@@ -20,6 +20,7 @@ SimpleLogin API implementation for Bitwarden to generate email aliases in Mailco
   - [3.1. Environment Variables](#31-environment-variables)
   - [3.2. Alias Templates](#32-alias-templates)
     - [3.2.1. Length Control](#321-length-control)
+  - [3.3. Request Overrides](#33-request-overrides)
 - [4. Usage](#4-usage)
   - [4.1. Setting up in Mailcow](#41-setting-up-in-mailcow)
   - [4.2. Setting Up in Bitwarden](#42-setting-up-in-bitwarden)
@@ -142,6 +143,7 @@ Variable | Description | Default
 `MAILCOW_ALIAS_ALLOW_SEND_AS` | Update mailbox `sender_acl` to allow sending as generated aliases (`true`/`false`) | true
 `MAILCOW_ALIAS_PUBLIC_COMMENT` | Public comment set on newly created aliases | simplelogin-mailcow-bridge
 `ALIAS_GENERATION_PATTERN` | Pattern for generating aliases | `{firstname}.{lastname}@%d`
+`ALIAS_EMAIL_DOMAIN_OVERRIDE_PRE_GENERATION_REGEX` | Optional regex to validate raw `email_domain` request value before generation/parsing | -
 `AUTH_CACHE_TTL` | TTL for cached auth entries in seconds (0 to disable) | 300
 `CORS_ALLOW_ORIGIN` | CORS Access-Control-Allow-Origin header value | -
 `LOG_LEVEL` | Log level (DEBUG, INFO, WARN, ERROR) | INFO
@@ -195,7 +197,25 @@ Sensible defaults are applied if values aren't provided:
 - Word-chars and chars: 10 characters by default
 - Names: between 3-10 characters by default
 
-<br>
+## 3.3. Request Overrides
+
+`POST /api/alias/random/new` accepts optional `email_domain` to override alias output for a single request.
+
+`email_domain` supports 3 modes:
+
+- **Domain only** (`@example.org`):
+  - Override generated alias domain.
+- **Localpart only** (`support` or `support@`):
+  - Override generated localpart.
+- **Localpart and domain** (`support@example.org`):
+  - Override both localpart and domain.
+
+Behavior:
+
+- If no override fields are provided, configured defaults are used.
+- If `ALIAS_EMAIL_DOMAIN_OVERRIDE_PRE_GENERATION_REGEX` is set, the raw
+  `email_domain` value must match it **before alias generation**.
+- Rejected overrides return HTTP `400`.
 
 # 4. Usage
 
