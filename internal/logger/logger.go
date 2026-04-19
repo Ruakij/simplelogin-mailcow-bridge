@@ -32,44 +32,33 @@ var levelColors = map[int]string{
 	LevelError: "\033[31m", // Red
 }
 
-// Reset color code
 const colorReset = "\033[0m"
 
 // Logger wraps the standard logger with levels
 type Logger struct {
-	level      int
-	useColors  bool
-	stdLogger  *log.Logger
-	mu         sync.Mutex
-	component  string
-	requestID  string
-	sessionID  string
-	useConsole bool
+	level     int
+	useColors bool
+	stdLogger *log.Logger
+	mu        sync.Mutex
+	component string
+	requestID string
 }
 
-var (
-	defaultLogger *Logger
-	once          sync.Once
-)
+var defaultLogger *Logger
 
-// initialize the default logger
 func init() {
-	// Set up default logger with INFO level
 	defaultLogger = newLogger(os.Stdout, LevelInfo, true, "")
 }
 
-// newLogger creates a new logger instance
 func newLogger(out io.Writer, level int, useColors bool, component string) *Logger {
 	return &Logger{
-		level:      level,
-		useColors:  useColors,
-		stdLogger:  log.New(out, "", log.Ldate|log.Ltime|log.Lmicroseconds|log.LUTC|log.Lshortfile),
-		component:  component,
-		useConsole: true,
+		level:     level,
+		useColors: useColors,
+		stdLogger: log.New(out, "", log.Ldate|log.Ltime|log.Lmicroseconds|log.LUTC|log.Lshortfile),
+		component: component,
 	}
 }
 
-// parseLevel converts a string level to its corresponding constant
 func parseLevel(level string) int {
 	switch strings.ToUpper(level) {
 	case "DEBUG":
@@ -81,7 +70,7 @@ func parseLevel(level string) int {
 	case "ERROR":
 		return LevelError
 	default:
-		return LevelInfo // Default to INFO
+		return LevelInfo
 	}
 }
 
@@ -123,46 +112,23 @@ func Mask(data string, percent float64) string {
 	return data[:keep] + "***"
 }
 
+func (l *Logger) clone() *Logger {
+	c := *l
+	return &c
+}
+
 // WithComponent creates a new logger with a specific component name
 func (l *Logger) WithComponent(component string) *Logger {
-	newLogger := &Logger{
-		level:      l.level,
-		useColors:  l.useColors,
-		stdLogger:  l.stdLogger,
-		component:  component,
-		requestID:  l.requestID,
-		sessionID:  l.sessionID,
-		useConsole: l.useConsole,
-	}
-	return newLogger
+	c := l.clone()
+	c.component = component
+	return c
 }
 
 // WithRequestID creates a new logger with a request ID
 func (l *Logger) WithRequestID(id string) *Logger {
-	newLogger := &Logger{
-		level:      l.level,
-		useColors:  l.useColors,
-		stdLogger:  l.stdLogger,
-		component:  l.component,
-		requestID:  id,
-		sessionID:  l.sessionID,
-		useConsole: l.useConsole,
-	}
-	return newLogger
-}
-
-// WithSessionID creates a new logger with a session ID
-func (l *Logger) WithSessionID(id string) *Logger {
-	newLogger := &Logger{
-		level:      l.level,
-		useColors:  l.useColors,
-		stdLogger:  l.stdLogger,
-		component:  l.component,
-		requestID:  l.requestID,
-		sessionID:  id,
-		useConsole: l.useConsole,
-	}
-	return newLogger
+	c := l.clone()
+	c.requestID = id
+	return c
 }
 
 // formatPrefix creates a log prefix with level, component, and context info
@@ -171,9 +137,6 @@ func (l *Logger) formatPrefix(level int) string {
 
 	if l.requestID != "" {
 		contextInfo.WriteString(fmt.Sprintf("[%s] ", l.requestID))
-	}
-	if l.sessionID != "" {
-		contextInfo.WriteString(fmt.Sprintf("(session:%s) ", l.sessionID))
 	}
 	if l.component != "" {
 		contextInfo.WriteString(fmt.Sprintf("<%s> ", l.component))
@@ -186,7 +149,6 @@ func (l *Logger) formatPrefix(level int) string {
 	return fmt.Sprintf("[%s] %s", levelStr, contextInfo.String())
 }
 
-// log logs a message at the specified level
 func (l *Logger) log(level int, format string, args ...interface{}) {
 	if level < l.level {
 		return
@@ -203,9 +165,7 @@ func (l *Logger) log(level int, format string, args ...interface{}) {
 		msg = format
 	}
 
-	if l.useConsole {
-		l.stdLogger.Output(3, prefix+msg) // 3 for correct file position
-	}
+	l.stdLogger.Output(3, prefix+msg)
 }
 
 // Debug logs a message at DEBUG level
@@ -301,11 +261,6 @@ func Error(format string, args ...interface{}) {
 func Fatal(format string, args ...interface{}) {
 	defaultLogger.log(LevelError, format, args...)
 	os.Exit(1)
-}
-
-// GetTimestamp returns a formatted timestamp for logging
-func GetTimestamp() string {
-	return time.Now().UTC().Format("2006-01-02 15:04:05.000")
 }
 
 // FormatDuration returns a human-readable representation of a duration
