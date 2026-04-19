@@ -6,7 +6,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 	"unicode"
 )
 
@@ -131,9 +130,6 @@ var (
 	lengthRegex = regexp.MustCompile(`\{([a-zA-Z-]+):(\d+)(?:,(\d+))?\}`)
 )
 
-// randSource is the source of randomness
-var randSource = rand.New(rand.NewSource(time.Now().UnixNano()))
-
 // GenerateAlias generates a new email alias based on the user's email domain and a pattern.
 func GenerateAlias(email, pattern string) (string, error) {
 	if email == "" || pattern == "" {
@@ -158,7 +154,7 @@ func GenerateAlias(email, pattern string) (string, error) {
 	processed = replaceTemplateVariables(processed, nameValues)
 
 	// Replace domain placeholder
-	processed = strings.Replace(processed, DomainPlaceholder, domain, -1)
+	processed = strings.ReplaceAll(processed, DomainPlaceholder, domain)
 
 	// Always return lowercase aliases for consistency
 	processed = strings.ToLower(processed)
@@ -297,7 +293,7 @@ func replaceTemplateVariables(pattern string, nameValues map[string]string) stri
 
 	// Replace name patterns first if they exist
 	for namePattern, value := range nameValues {
-		result = strings.Replace(result, namePattern, value, -1)
+		result = strings.ReplaceAll(result, namePattern, value)
 	}
 
 	// Process length specifications using regex
@@ -412,16 +408,16 @@ func generateWords(count int) string {
 	words := make([]string, count)
 	for i := 0; i < count; i++ {
 		// 70% chance of adjective-noun pair, 30% chance of just a noun
-		if randSource.Float64() < 0.7 && count < 3 {
-			adj := adjectives[randSource.Intn(len(adjectives))]
-			noun := commonNouns[randSource.Intn(len(commonNouns))]
+		if rand.Float64() < 0.7 && count < 3 {
+			adj := adjectives[rand.Intn(len(adjectives))]
+			noun := commonNouns[rand.Intn(len(commonNouns))]
 			words[i] = adj + noun
 		} else {
 			// Choose from adjectives or nouns
-			if randSource.Float64() < 0.5 {
-				words[i] = adjectives[randSource.Intn(len(adjectives))]
+			if rand.Float64() < 0.5 {
+				words[i] = adjectives[rand.Intn(len(adjectives))]
 			} else {
-				words[i] = commonNouns[randSource.Intn(len(commonNouns))]
+				words[i] = commonNouns[rand.Intn(len(commonNouns))]
 			}
 		}
 	}
@@ -430,7 +426,7 @@ func generateWords(count int) string {
 	// Choose a separator if more than one word
 	if count > 1 {
 		separators := []string{".", "_", "-", ""}
-		separator = separators[randSource.Intn(len(separators))]
+		separator = separators[rand.Intn(len(separators))]
 	}
 
 	return strings.Join(words, separator)
@@ -450,7 +446,7 @@ func generateWord(length int) string {
 	}
 
 	if len(candidates) > 0 {
-		return candidates[randSource.Intn(len(candidates))]
+		return candidates[rand.Intn(len(candidates))]
 	}
 
 	return generateRandomChars(letterChars, length)
@@ -472,7 +468,7 @@ func generateWordChars(length int) string {
 	}
 
 	// First character must be a letter
-	result := string(letterChars[randSource.Intn(len(letterChars))])
+	result := string(letterChars[rand.Intn(len(letterChars))])
 
 	// Rest can be letters or numbers
 	if length > 1 {
@@ -489,7 +485,7 @@ func generateChars(length int) string {
 	}
 
 	// First character must be a letter
-	result := string(letterChars[randSource.Intn(len(letterChars))])
+	result := string(letterChars[rand.Intn(len(letterChars))])
 
 	// Rest can be any allowed character
 	if length > 1 {
@@ -520,26 +516,26 @@ func generateName(minLength, maxLength int) string {
 	var result string
 
 	// Start with either a common syllable, an initial consonant cluster, or a single consonant
-	startChoice := randSource.Float64()
+	startChoice := rand.Float64()
 	if startChoice < 0.5 {
 		// Use a common English syllable to start (50% chance)
-		result = commonSyllables[randSource.Intn(len(commonSyllables))]
+		result = commonSyllables[rand.Intn(len(commonSyllables))]
 	} else if startChoice < 0.8 {
 		// Use a common English initial consonant cluster (30% chance)
-		result = initialConsonantClusters[randSource.Intn(len(initialConsonantClusters))]
+		result = initialConsonantClusters[rand.Intn(len(initialConsonantClusters))]
 		// Add a vowel after the cluster
-		result += string(vowels[randSource.Intn(len(vowels))])
+		result += string(vowels[rand.Intn(len(vowels))])
 	} else {
 		// Start with a single consonant followed by a vowel (20% chance)
-		result = string(consonants[randSource.Intn(len(consonants))]) +
-			string(vowels[randSource.Intn(len(vowels))])
+		result = string(consonants[rand.Intn(len(consonants))]) +
+			string(vowels[rand.Intn(len(vowels))])
 	}
 
 	// Build the name with English patterns until we're close to the target length
 	for len(result) < length-2 {
 		// 60% chance to add a common English syllable if there's room
-		if randSource.Float64() < 0.6 && len(result)+2 <= length {
-			syllable := commonSyllables[randSource.Intn(len(commonSyllables))]
+		if rand.Float64() < 0.6 && len(result)+2 <= length {
+			syllable := commonSyllables[rand.Intn(len(commonSyllables))]
 			// Make sure we don't exceed the target length
 			if len(result)+len(syllable) <= length {
 				result += syllable
@@ -551,10 +547,10 @@ func generateName(minLength, maxLength int) string {
 		lastChar := []rune(result)[len([]rune(result))-1]
 		if isVowel(lastChar) {
 			// After a vowel, typically a consonant follows
-			result += string(consonants[randSource.Intn(len(consonants))])
+			result += string(consonants[rand.Intn(len(consonants))])
 		} else {
 			// After a consonant, typically a vowel follows
-			result += string(vowels[randSource.Intn(len(vowels))])
+			result += string(vowels[rand.Intn(len(vowels))])
 		}
 	}
 
@@ -562,7 +558,7 @@ func generateName(minLength, maxLength int) string {
 	if len(result) <= length-2 && len(nameEndings) > 0 {
 		// Find a suitable ending that fits
 		for i := 0; i < 5; i++ { // Try up to 5 times to find a fitting ending
-			ending := nameEndings[randSource.Intn(len(nameEndings))]
+			ending := nameEndings[rand.Intn(len(nameEndings))]
 			if len(result)+len(ending) <= length {
 				result += ending
 				break
@@ -576,7 +572,7 @@ func generateName(minLength, maxLength int) string {
 		if isVowel(lastChar) {
 			// After a vowel, add a consonant that works well at the end of English names
 			endConsonants := []string{"n", "l", "r", "s", "t", "m", "th", "y"}
-			resultString := endConsonants[randSource.Intn(len(endConsonants))]
+			resultString := endConsonants[rand.Intn(len(endConsonants))]
 			// Handle special case for 'th'
 			if resultString == "th" {
 				if len(result)+2 <= length {
@@ -590,7 +586,7 @@ func generateName(minLength, maxLength int) string {
 		} else {
 			// After a consonant, add a vowel that works well at the end of English names
 			endVowels := []rune{'a', 'e', 'i', 'o', 'y'}
-			result += string(endVowels[randSource.Intn(len(endVowels))])
+			result += string(endVowels[rand.Intn(len(endVowels))])
 		}
 	}
 
@@ -600,7 +596,7 @@ func generateName(minLength, maxLength int) string {
 	}
 
 	// Capitalize first letter for English names (more common than not)
-	if randSource.Float64() < 0.7 {
+	if rand.Float64() < 0.7 {
 		runes := []rune(result)
 		runes[0] = unicode.ToUpper(runes[0])
 		result = string(runes)
@@ -617,30 +613,30 @@ func generateNameVariation(baseName string, changeRatio float64) string {
 	changesToMake := int(float64(len(runes)) * changeRatio)
 
 	for i := 0; i < changesToMake; i++ {
-		pos := randSource.Intn(len(runes))
+		pos := rand.Intn(len(runes))
 
 		if isVowel(runes[pos]) {
 			// Replace vowel with another vowel
-			runes[pos] = vowels[randSource.Intn(len(vowels))]
+			runes[pos] = vowels[rand.Intn(len(vowels))]
 		} else {
 			// Replace consonant with another consonant
-			runes[pos] = consonants[randSource.Intn(len(consonants))]
+			runes[pos] = consonants[rand.Intn(len(consonants))]
 		}
 	}
 
 	// Sometimes add or remove a character
-	if randSource.Float64() < 0.3 && len(runes) > 3 {
+	if rand.Float64() < 0.3 && len(runes) > 3 {
 		// Remove a random character
-		pos := randSource.Intn(len(runes))
+		pos := rand.Intn(len(runes))
 		runes = append(runes[:pos], runes[pos+1:]...)
-	} else if randSource.Float64() < 0.3 {
+	} else if rand.Float64() < 0.3 {
 		// Add a random character
-		pos := randSource.Intn(len(runes))
+		pos := rand.Intn(len(runes))
 		var newChar rune
 		if isVowel(runes[pos]) {
-			newChar = consonants[randSource.Intn(len(consonants))]
+			newChar = consonants[rand.Intn(len(consonants))]
 		} else {
-			newChar = vowels[randSource.Intn(len(vowels))]
+			newChar = vowels[rand.Intn(len(vowels))]
 		}
 		runes = append(runes[:pos], append([]rune{newChar}, runes[pos:]...)...)
 	}
@@ -675,9 +671,9 @@ func generateNameWithLength(baseName string, changeRatio float64, minLength, max
 
 			var newChar rune
 			if lastIsVowel {
-				newChar = consonants[randSource.Intn(len(consonants))]
+				newChar = consonants[rand.Intn(len(consonants))]
 			} else {
-				newChar = vowels[randSource.Intn(len(vowels))]
+				newChar = vowels[rand.Intn(len(vowels))]
 			}
 
 			runes = append(runes, newChar)
@@ -715,7 +711,7 @@ func isVowel(r rune) bool {
 func generateRandomChars(charset string, length int) string {
 	b := make([]byte, length)
 	for i := range b {
-		b[i] = charset[randSource.Intn(len(charset))]
+		b[i] = charset[rand.Intn(len(charset))]
 	}
 	return string(b)
 }
@@ -725,5 +721,5 @@ func randBetween(min, max int) int {
 	if min == max {
 		return min
 	}
-	return randSource.Intn(max-min+1) + min
+	return rand.Intn(max-min+1) + min
 }
