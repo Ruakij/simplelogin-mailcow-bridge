@@ -14,17 +14,12 @@ import (
 	"github.com/emersion/go-imap/client"
 )
 
-// AuthCache represents a cached authentication
-type AuthCache struct {
-	Expiry time.Time
-}
-
 // AuthModule is a module for authenticating users against Mailcow
 type AuthModule struct {
 	method        string
 	serverAddress string
 	cacheTTL      time.Duration
-	cache         map[string]AuthCache
+	cache         map[string]time.Time
 	cacheMutex    sync.RWMutex
 	logger        *logger.Logger
 }
@@ -35,19 +30,11 @@ func NewAuthModule(method, serverAddress string, cacheTTL int) (*AuthModule, err
 		return nil, fmt.Errorf("method and serverAddress must be set")
 	}
 
-	// Default to IMAP if method is not specified
-	if method == "" {
-		method = "IMAP"
-	}
-
-	// Convert TTL from seconds to duration
-	cacheDuration := time.Duration(cacheTTL) * time.Second
-
 	return &AuthModule{
 		method:        method,
 		serverAddress: serverAddress,
-		cacheTTL:      cacheDuration,
-		cache:         make(map[string]AuthCache),
+		cacheTTL:      time.Duration(cacheTTL) * time.Second,
+		cache:         make(map[string]time.Time),
 		logger:        logger.WithComponent("Auth"),
 	}, nil
 }
@@ -59,37 +46,31 @@ func (a *AuthModule) IsCacheEnabled() bool {
 
 // hashCredentials creates a secure hash for the credential cache
 func hashCredentials(username, password string) string {
-	// Combine username and password, then hash
-	combined := username + ":" + password
-	hash := sha256.Sum256([]byte(combined))
+	hash := sha256.Sum256([]byte(username + ":" + password))
 	return fmt.Sprintf("%x", hash)
 }
 
 // Authenticate authenticates a user against Mailcow
 func (a *AuthModule) Authenticate(username, password string) error {
-	// Generate a request ID for logging
 	requestID := fmt.Sprintf("AUTH-%d", time.Now().UnixNano())
 	log := a.logger.WithRequestID(requestID)
 
-	// Mask username for logging
 	maskedUser := logger.Mask(username, 0.25)
 
-	// Check cache if enabled (TTL > 0)
 	if a.IsCacheEnabled() {
 		credHash := hashCredentials(username, password)
 		a.cacheMutex.RLock()
-		cacheEntry, found := a.cache[credHash]
+		expiry, found := a.cache[credHash]
 		a.cacheMutex.RUnlock()
 
-		if found && time.Now().Before(cacheEntry.Expiry) {
+		if found && time.Now().Before(expiry) {
 			log.Debug("Using cached authentication for user %s (valid until %s)",
-				maskedUser, cacheEntry.Expiry.Format(time.RFC3339))
-			return nil // Cached authentication is valid
+				maskedUser, expiry.Format(time.RFC3339))
+			return nil
 		}
 
 		if found {
-			log.Debug("Cached authentication for user %s has expired, re-authenticating",
-				maskedUser)
+			log.Debug("Cached authentication for user %s has expired, re-authenticating", maskedUser)
 		}
 	}
 
@@ -116,15 +97,12 @@ func (a *AuthModule) Authenticate(username, password string) error {
 		return err
 	}
 
-	// Cache successful authentication if caching is enabled
 	if a.IsCacheEnabled() {
 		credHash := hashCredentials(username, password)
 		expiry := time.Now().Add(a.cacheTTL)
 
 		a.cacheMutex.Lock()
-		a.cache[credHash] = AuthCache{
-			Expiry: expiry,
-		}
+		a.cache[credHash] = expiry
 		a.cacheMutex.Unlock()
 
 		log.Debug("Cached authentication for user %s (valid until %s)",
@@ -147,8 +125,8 @@ func (a *AuthModule) CleanupCache() int {
 	a.cacheMutex.Lock()
 	defer a.cacheMutex.Unlock()
 
-	for key, entry := range a.cache {
-		if now.After(entry.Expiry) {
+	for key, expiry := range a.cache {
+		if now.After(expiry) {
 			delete(a.cache, key)
 			removed++
 		}
@@ -174,9 +152,9 @@ func (a *AuthModule) CacheStats() (int, int) {
 	a.cacheMutex.RLock()
 	defer a.cacheMutex.RUnlock()
 
-	for _, entry := range a.cache {
+	for _, expiry := range a.cache {
 		total++
-		if now.Before(entry.Expiry) {
+		if now.Before(expiry) {
 			valid++
 		}
 	}
@@ -189,7 +167,6 @@ func (a *AuthModule) authenticateIMAP(username, password, requestID string) erro
 	log := a.logger.WithRequestID(requestID)
 	log.Debug("Establishing TLS connection to IMAP server")
 
-	// Connect to server with a timeout
 	dialer := &net.Dialer{Timeout: 30 * time.Second}
 	conn, err := tls.DialWithDialer(dialer, "tcp", a.serverAddress, &tls.Config{
 		InsecureSkipVerify: false,
@@ -200,29 +177,22 @@ func (a *AuthModule) authenticateIMAP(username, password, requestID string) erro
 	}
 	log.Debug("TLS connection established")
 
-	// Create a new IMAP client
-	log.Debug("Creating IMAP client")
 	c, err := client.New(conn)
 	if err != nil {
 		log.Error("Failed to create IMAP client: %v", err)
 		return fmt.Errorf("failed to create IMAP client: %w", err)
 	}
 
-	// Login
-	log.Debug("Attempting IMAP login")
 	if err := c.Login(username, password); err != nil {
 		log.Error("IMAP login failed: %v", err)
 		return fmt.Errorf("IMAP authentication failed: %w", err)
 	}
 	log.Debug("IMAP login successful")
 
-	// Logout
-	log.Debug("Performing IMAP logout")
 	if err := c.Logout(); err != nil {
 		log.Error("IMAP logout error: %v", err)
 		return fmt.Errorf("IMAP logout error: %w", err)
 	}
-	log.Debug("IMAP logout completed")
 
 	return nil
 }
@@ -238,10 +208,7 @@ func (a *AuthModule) authenticateSMTP(username, password, requestID string) erro
 	}
 
 	auth := smtp.PlainAuth("", username, password, host)
-	log.Debug("SMTP auth prepared for host: %s", host)
 
-	// Create a TLS connection
-	log.Debug("Establishing TLS connection to SMTP server")
 	conn, err := tls.Dial("tcp", a.serverAddress, &tls.Config{
 		InsecureSkipVerify: false,
 	})
@@ -250,20 +217,14 @@ func (a *AuthModule) authenticateSMTP(username, password, requestID string) erro
 		return fmt.Errorf("failed to connect to SMTP server: %w", err)
 	}
 	defer conn.Close()
-	log.Debug("TLS connection established")
 
-	// Create a new SMTP client
-	log.Debug("Creating SMTP client")
 	c, err := smtp.NewClient(conn, host)
 	if err != nil {
 		log.Error("Failed to create SMTP client: %v", err)
 		return fmt.Errorf("failed to create SMTP client: %w", err)
 	}
 	defer c.Close()
-	log.Debug("SMTP client created")
 
-	// Authenticate
-	log.Debug("Attempting SMTP authentication")
 	if err := c.Auth(auth); err != nil {
 		log.Error("SMTP authentication failed: %v", err)
 		return fmt.Errorf("SMTP authentication failed: %w", err)

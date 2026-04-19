@@ -17,7 +17,6 @@ type Config struct {
 	MailcowAliasSOGoVisible   bool
 	MailcowAliasAllowSendAs   bool
 	MailcowAliasPublicComment string
-	AliasValidityPeriod       int
 	AliasGenerationPattern    string
 	// Auth caching configuration
 	AuthCacheTTL int // in seconds, 0 means disabled
@@ -27,7 +26,6 @@ type Config struct {
 	LogLevel    string
 	LogColorize bool
 }
-
 
 // LoadConfig loads the configuration from environment variables
 func LoadConfig() (*Config, error) {
