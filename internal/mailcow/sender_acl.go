@@ -39,7 +39,8 @@ func (c *MailcowClient) AllowMailboxToSendAsAlias(mailbox, aliasAddress string) 
 
 	existingSenderACL, err := c.getMailboxSenderACL(mailbox)
 	if err != nil {
-		log.Warn("Failed to fetch existing sender ACL for mailbox %s: %v", mailbox, err)
+		log.Error("Failed to fetch existing sender ACL for mailbox %s: %v", mailbox, err)
+		return fmt.Errorf("failed to fetch existing sender ACL for mailbox %s: %w", mailbox, err)
 	}
 
 	senderACL := buildSenderACL(existingSenderACL, aliasAddress)
@@ -78,12 +79,9 @@ func (c *MailcowClient) AllowMailboxToSendAsAlias(mailbox, aliasAddress string) 
 	if resp.StatusCode != http.StatusOK {
 		body, readErr := readResponseBody(resp.Body)
 		if readErr != nil {
-			log.Error("Failed to read sender ACL update error response body: %v", readErr)
-			return fmt.Errorf("failed to update sender ACL, status code: %d, and could not read response body", resp.StatusCode)
+			return fmt.Errorf("status %d (body unreadable: %w)", resp.StatusCode, readErr)
 		}
-
-		log.Error("Sender ACL update error response body: %s", string(body))
-		return fmt.Errorf("failed to update sender ACL, status code: %d, response: %s", resp.StatusCode, string(body))
+		return fmt.Errorf("status %d: %s", resp.StatusCode, string(body))
 	}
 
 	_, _ = io.Copy(io.Discard, resp.Body)
@@ -97,42 +95,36 @@ func (c *MailcowClient) getMailboxSenderACL(mailbox string) ([]string, error) {
 
 	req, err := http.NewRequest("GET", mailboxEndpoint, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create mailbox query request: %w", err)
+		return nil, err
 	}
 	req.Header.Set(mailcowAPIKeyHeader, c.apiKey)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query mailbox sender ACL: %w", err)
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		body, readErr := readResponseBody(resp.Body)
 		if readErr != nil {
-			return nil, fmt.Errorf("failed to query mailbox sender ACL, status code: %d, and could not read response body", resp.StatusCode)
+			return nil, fmt.Errorf("status %d (body unreadable: %w)", resp.StatusCode, readErr)
 		}
-
-		return nil, fmt.Errorf("failed to query mailbox sender ACL, status code: %d, response: %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("status %d: %s", resp.StatusCode, string(body))
 	}
 
 	body, err := readResponseBody(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read mailbox sender ACL response body: %w", err)
+		return nil, err
 	}
 
-	senderACL, err := parseSenderACLFromMailboxResponse(body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse mailbox sender ACL response: %w", err)
-	}
-
-	return senderACL, nil
+	return parseSenderACLFromMailboxResponse(body)
 }
 
 func parseSenderACLFromMailboxResponse(body []byte) ([]string, error) {
 	var entries []mailboxEntry
 	if err := json.Unmarshal(body, &entries); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal mailbox response: %w", err)
+		return nil, err
 	}
 
 	if len(entries) == 0 {
