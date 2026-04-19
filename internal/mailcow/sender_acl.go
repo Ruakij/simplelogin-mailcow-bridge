@@ -5,10 +5,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"git.ruekov.eu/ruakij/simplelogin-mailcow-bridge/internal/logger"
 )
+
+type mailboxEntry struct {
+	SenderACL  stringList        `json:"sender_acl"`
+	Attributes mailboxAttributes `json:"attributes"`
+}
+
+type mailboxAttributes struct {
+	SenderACL stringList `json:"sender_acl"`
+}
 
 type editMailboxRequest struct {
 	Items []string        `json:"items"`
@@ -26,9 +36,17 @@ func (c *MailcowClient) AllowMailboxToSendAsAlias(mailbox, aliasAddress string) 
 
 	log.Info("Updating sender ACL for mailbox %s to allow alias %s", mailbox, aliasAddress)
 
+	existingSenderACL, err := c.getMailboxSenderACL(mailbox)
+	if err != nil {
+		log.Warn("Failed to fetch existing sender ACL for mailbox %s: %v", mailbox, err)
+	}
+
+	senderACL := buildSenderACL(existingSenderACL, aliasAddress)
+	log.Debug("Computed merged sender ACL with %d entries for mailbox %s", len(senderACL), mailbox)
+
 	requestBody, err := json.Marshal(editMailboxRequest{
 		Items: []string{mailbox},
-		Attr:  editMailboxAttr{SenderACL: []string{"default", aliasAddress}},
+		Attr:  editMailboxAttr{SenderACL: senderACL},
 	})
 	if err != nil {
 		log.Error("Failed to marshal sender ACL update request body: %v", err)
@@ -74,4 +92,69 @@ func (c *MailcowClient) AllowMailboxToSendAsAlias(mailbox, aliasAddress string) 
 
 	log.Info("Successfully updated sender ACL for mailbox %s", mailbox)
 	return nil
+}
+
+func (c *MailcowClient) getMailboxSenderACL(mailbox string) ([]string, error) {
+	mailboxEndpoint := fmt.Sprintf("%s/api/v1/get/mailbox/%s", c.apiURL, url.PathEscape(mailbox))
+
+	req, err := http.NewRequest("GET", mailboxEndpoint, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create mailbox query request: %w", err)
+	}
+	req.Header.Set(mailcowAPIKeyHeader, c.apiKey)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query mailbox sender ACL: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, readErr := readResponseBody(resp.Body)
+		if readErr != nil {
+			return nil, fmt.Errorf("failed to query mailbox sender ACL, status code: %d, and could not read response body", resp.StatusCode)
+		}
+
+		return nil, fmt.Errorf("failed to query mailbox sender ACL, status code: %d, response: %s", resp.StatusCode, string(body))
+	}
+
+	body, err := readResponseBody(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read mailbox sender ACL response body: %w", err)
+	}
+
+	senderACL, err := parseSenderACLFromMailboxResponse(body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse mailbox sender ACL response: %w", err)
+	}
+
+	return senderACL, nil
+}
+
+func parseSenderACLFromMailboxResponse(body []byte) ([]string, error) {
+	var entries []mailboxEntry
+	if err := json.Unmarshal(body, &entries); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal mailbox response: %w", err)
+	}
+
+	if len(entries) == 0 {
+		return nil, nil
+	}
+
+	entry := entries[0]
+	if len(entry.SenderACL) > 0 {
+		return entry.SenderACL, nil
+	}
+	if len(entry.Attributes.SenderACL) > 0 {
+		return entry.Attributes.SenderACL, nil
+	}
+
+	return nil, nil
+}
+
+func buildSenderACL(existingSenderACL []string, newAlias string) []string {
+	merged := make([]string, 0, len(existingSenderACL)+1)
+	merged = append(merged, existingSenderACL...)
+	merged = append(merged, newAlias)
+	return merged
 }
