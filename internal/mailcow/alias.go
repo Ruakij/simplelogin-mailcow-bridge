@@ -71,10 +71,7 @@ func (c *MailcowClient) CreateAlias(address, gotoAddress string, sogoVisible boo
 		return fmt.Errorf("failed to create alias, status code: %d, response: %s", resp.StatusCode, string(body))
 	}
 
-	if _, err = io.ReadAll(resp.Body); err != nil {
-		log.Error("Failed to read success response body: %v", err)
-		return fmt.Errorf("failed to read response body: %w", err)
-	}
+	_, _ = io.Copy(io.Discard, resp.Body)
 
 	log.Info("Successfully created alias in Mailcow")
 	return nil

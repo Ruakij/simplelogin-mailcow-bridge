@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"time"
@@ -85,10 +86,7 @@ func (c *MailcowClient) AllowMailboxToSendAsAlias(mailbox, aliasAddress string) 
 		return fmt.Errorf("failed to update sender ACL, status code: %d, response: %s", resp.StatusCode, string(body))
 	}
 
-	if _, err := readResponseBody(resp.Body); err != nil {
-		log.Error("Failed to read sender ACL update success response body: %v", err)
-		return fmt.Errorf("failed to read sender ACL update response body: %w", err)
-	}
+	_, _ = io.Copy(io.Discard, resp.Body)
 
 	log.Info("Successfully updated sender ACL for mailbox %s", mailbox)
 	return nil

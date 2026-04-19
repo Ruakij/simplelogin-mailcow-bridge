@@ -175,6 +175,7 @@ func (a *AuthModule) authenticateIMAP(username, password, requestID string) erro
 		log.Error("Failed to connect to IMAP server: %v", err)
 		return fmt.Errorf("failed to connect to IMAP server: %w", err)
 	}
+	defer conn.Close()
 	log.Debug("TLS connection established")
 
 	c, err := client.New(conn)
