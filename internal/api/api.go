@@ -139,10 +139,13 @@ func (a *API) handleNewAlias(w http.ResponseWriter, r *http.Request) {
 
 	log.Info("Alias created successfully in Mailcow")
 
-	// Prepare response
-	response := map[string]string{
-		"alias":           generatedAlias,
-		"expiration_date": time.Now().AddDate(10, 0, 0).Format(time.RFC3339), // Fixed +10 years expiration for simplicity, we cannot use temp aliases in Mailcow via external Api
+	type aliasResponse struct {
+		Alias          string `json:"alias"`
+		ExpirationDate string `json:"expiration_date"`
+	}
+	response := aliasResponse{
+		Alias:          generatedAlias,
+		ExpirationDate: time.Now().AddDate(10, 0, 0).Format(time.RFC3339), // Fixed +10 years expiration for simplicity, we cannot use temp aliases in Mailcow via external Api
 	}
 
 	// Return response as JSON

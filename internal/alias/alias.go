@@ -136,12 +136,10 @@ func GenerateAlias(email, pattern string) (string, error) {
 		return "", fmt.Errorf("email and pattern must be set")
 	}
 
-	// Extract domain from email
-	parts := strings.Split(email, "@")
-	if len(parts) != 2 {
+	_, domain, ok := strings.Cut(email, "@")
+	if !ok {
 		return "", fmt.Errorf("invalid email format")
 	}
-	domain := parts[1]
 
 	// Process template
 	processed := pattern
