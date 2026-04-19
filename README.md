@@ -138,8 +138,8 @@ Variable | Description | Default
 `MAILCOW_ADMIN_API_KEY`* | Mailcow Admin API key | -
 `MAILCOW_AUTH_METHOD` | Method to authenticate users (SMTP or IMAP) | IMAP
 `MAILCOW_SERVER_ADDRESS`* | Address to the Mailcow service used for auth (e.g. mail.example.com:993 for IMAP) | -
-`MAILCOW_ALIAS_SOGO_VISIBLE` | Create aliases as visible/selectable sender in SOGo (`true`/`false`) | true
-`MAILCOW_ALIAS_ALLOW_SEND_AS` | Update mailbox `sender_acl` to allow sending as generated aliases (`true`/`false`) | true
+`MAILCOW_ALIAS_SOGO_VISIBLE` | Create aliases as visible/selectable sender in SOGo (`true`/`false`) | false
+`MAILCOW_ALIAS_ALLOW_SEND_AS` | Allow the mailbox to send as the alias address in SOGo and SMTP clients (`true`/`false`) | false
 `MAILCOW_ALIAS_PUBLIC_COMMENT` | Public comment set on newly created aliases | simplelogin-mailcow-bridge
 `ALIAS_GENERATION_PATTERN` | Pattern for generating aliases | `{firstname}.{lastname}@%d`
 `AUTH_CACHE_TTL` | TTL for cached auth entries in seconds (0 to disable) | 300

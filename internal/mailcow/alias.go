@@ -16,11 +16,12 @@ type createAliasRequest struct {
 	Goto          string `json:"goto"`
 	Active        string `json:"active"`
 	SogoVisible   string `json:"sogo_visible"`
+	SenderAllowed string `json:"sender_allowed"`
 	PublicComment string `json:"public_comment"`
 }
 
-// CreateAlias creates a new alias in Mailcow
-func (c *MailcowClient) CreateAlias(address, gotoAddress string, sogoVisible bool, publicComment string) error {
+// CreateAlias creates a new alias in Mailcow.
+func (c *MailcowClient) CreateAlias(address, gotoAddress string, sogoVisible bool, senderAllowed bool, publicComment string) error {
 	requestID := fmt.Sprintf("MCOW-%d", time.Now().UnixNano())
 	log := c.logger.WithRequestID(requestID)
 
@@ -31,6 +32,7 @@ func (c *MailcowClient) CreateAlias(address, gotoAddress string, sogoVisible boo
 		Goto:          gotoAddress,
 		Active:        "1",
 		SogoVisible:   booleanToMailcow(sogoVisible),
+		SenderAllowed: booleanToMailcow(senderAllowed),
 		PublicComment: publicComment,
 	})
 	if err != nil {
