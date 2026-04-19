@@ -17,7 +17,7 @@ import (
 func requestLogger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		requestID := fmt.Sprintf("%d", time.Now().UnixNano())
+		requestID := fmt.Sprintf("%d", start.UnixNano())
 
 		// Create a logger with request ID for this request
 		log := logger.WithRequestID(requestID)
