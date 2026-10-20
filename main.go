@@ -37,11 +37,11 @@ func requestLogger(next http.Handler) http.Handler {
 			r.RemoteAddr, r.Method, r.RequestURI, r.Proto, rw.statusCode, durationFormatted)
 
 		if rw.statusCode >= 500 {
-			log.Error(logMsg)
+			log.Error("%s", logMsg)
 		} else if rw.statusCode >= 400 {
-			log.Warn(logMsg)
+			log.Warn("%s", logMsg)
 		} else {
-			log.Info(logMsg)
+			log.Info("%s", logMsg)
 		}
 	})
 }

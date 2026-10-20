@@ -39,7 +39,7 @@ type Logger struct {
 	level     int
 	useColors bool
 	stdLogger *log.Logger
-	mu        sync.Mutex
+	mu        *sync.Mutex
 	component string
 	requestID string
 }
@@ -55,6 +55,7 @@ func newLogger(out io.Writer, level int, useColors bool, component string) *Logg
 		level:     level,
 		useColors: useColors,
 		stdLogger: log.New(out, "", log.Ldate|log.Ltime|log.Lmicroseconds|log.LUTC|log.Lshortfile),
+		mu:        &sync.Mutex{},
 		component: component,
 	}
 }
@@ -101,10 +102,7 @@ func Mask(data string, percent float64) string {
 		return strings.Repeat("*", length)
 	}
 
-	keep := int(float64(length) * (1 - percent))
-	if keep < 1 {
-		keep = 1
-	}
+	keep := max(int(float64(length)*(1-percent)), 1)
 	if keep > length-1 {
 		keep = length - 1
 	}
@@ -149,7 +147,7 @@ func (l *Logger) formatPrefix(level int) string {
 	return fmt.Sprintf("[%s] %s", levelStr, contextInfo.String())
 }
 
-func (l *Logger) log(level int, format string, args ...interface{}) {
+func (l *Logger) log(level int, format string, args ...any) {
 	if level < l.level {
 		return
 	}
@@ -169,27 +167,27 @@ func (l *Logger) log(level int, format string, args ...interface{}) {
 }
 
 // Debug logs a message at DEBUG level
-func (l *Logger) Debug(format string, args ...interface{}) {
+func (l *Logger) Debug(format string, args ...any) {
 	l.log(LevelDebug, format, args...)
 }
 
 // Info logs a message at INFO level
-func (l *Logger) Info(format string, args ...interface{}) {
+func (l *Logger) Info(format string, args ...any) {
 	l.log(LevelInfo, format, args...)
 }
 
 // Warn logs a message at WARN level
-func (l *Logger) Warn(format string, args ...interface{}) {
+func (l *Logger) Warn(format string, args ...any) {
 	l.log(LevelWarn, format, args...)
 }
 
 // Error logs a message at ERROR level
-func (l *Logger) Error(format string, args ...interface{}) {
+func (l *Logger) Error(format string, args ...any) {
 	l.log(LevelError, format, args...)
 }
 
 // Fatal logs an error message, then exits
-func (l *Logger) Fatal(format string, args ...interface{}) {
+func (l *Logger) Fatal(format string, args ...any) {
 	l.log(LevelError, format, args...)
 	os.Exit(1)
 }
@@ -238,27 +236,27 @@ func WithRequestID(id string) *Logger {
 }
 
 // Debug logs a message at DEBUG level with the default logger
-func Debug(format string, args ...interface{}) {
+func Debug(format string, args ...any) {
 	defaultLogger.log(LevelDebug, format, args...)
 }
 
 // Info logs a message at INFO level with the default logger
-func Info(format string, args ...interface{}) {
+func Info(format string, args ...any) {
 	defaultLogger.log(LevelInfo, format, args...)
 }
 
 // Warn logs a message at WARN level with the default logger
-func Warn(format string, args ...interface{}) {
+func Warn(format string, args ...any) {
 	defaultLogger.log(LevelWarn, format, args...)
 }
 
 // Error logs a message at ERROR level with the default logger
-func Error(format string, args ...interface{}) {
+func Error(format string, args ...any) {
 	defaultLogger.log(LevelError, format, args...)
 }
 
 // Fatal logs a message at ERROR level with the default logger, then exits
-func Fatal(format string, args ...interface{}) {
+func Fatal(format string, args ...any) {
 	defaultLogger.log(LevelError, format, args...)
 	os.Exit(1)
 }

@@ -94,7 +94,7 @@ docker-compose up -d
 
 ### 2.2.1. Prerequisites
 
-- Go 1.24 or higher
+- Go 1.27 or higher
 - Mailcow Admin API key
 
 <br>

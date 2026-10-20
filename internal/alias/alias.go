@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode"
@@ -555,7 +556,7 @@ func generateName(minLength, maxLength int) string {
 	// Add a typical English ending if we need more characters
 	if len(result) <= length-2 && len(nameEndings) > 0 {
 		// Find a suitable ending that fits
-		for i := 0; i < 5; i++ { // Try up to 5 times to find a fitting ending
+		for range 5 { // Try up to 5 times to find a fitting ending
 			ending := nameEndings[rand.Intn(len(nameEndings))]
 			if len(result)+len(ending) <= length {
 				result += ending
@@ -610,7 +611,7 @@ func generateNameVariation(baseName string, changeRatio float64) string {
 	// Determine how many characters to change
 	changesToMake := int(float64(len(runes)) * changeRatio)
 
-	for i := 0; i < changesToMake; i++ {
+	for range changesToMake {
 		pos := rand.Intn(len(runes))
 
 		if isVowel(runes[pos]) {
@@ -697,12 +698,7 @@ func generateNameWithLength(baseName string, changeRatio float64, minLength, max
 // isVowel checks if a rune is a vowel
 func isVowel(r rune) bool {
 	r = unicode.ToLower(r)
-	for _, v := range vowels {
-		if r == v {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(vowels, r)
 }
 
 // generateRandomChars generates a random string from the given character set

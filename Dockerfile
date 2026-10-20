@@ -1,4 +1,6 @@
-FROM --platform=$BUILDPLATFORM golang:1.22-alpine AS builder
+# Cross-compiling from the build platform, so a multi-arch build needs no
+# emulated toolchain.
+FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -10,10 +12,13 @@ RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o simplelogin-mailcow-bridge main.go
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
+    go build -trimpath -ldflags "-s -w" -o simplelogin-mailcow-bridge main.go
 
 
-FROM alpine:3.21
+# The binary is static; the image only needs CA certificates for the HTTPS and
+# IMAPS connections to Mailcow, which distroless/static ships.
+FROM gcr.io/distroless/static:nonroot
 
 WORKDIR /app
 
@@ -21,4 +26,4 @@ COPY --from=builder /app/simplelogin-mailcow-bridge .
 
 EXPOSE 8080
 
-CMD ["./simplelogin-mailcow-bridge"]
+ENTRYPOINT ["./simplelogin-mailcow-bridge"]

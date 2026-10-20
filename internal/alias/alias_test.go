@@ -29,7 +29,7 @@ func TestGenerateNames(t *testing.T) {
 	for _, template := range templates {
 		fmt.Printf("\nTemplate: %s\n", template)
 		fmt.Println("Results:")
-		for i := 0; i < 5; i++ {
+		for range 5 {
 			alias, err := GenerateAlias(email, template)
 			if err != nil {
 				t.Errorf("Error generating alias with template %s: %v", template, err)
@@ -51,7 +51,7 @@ func TestGenerateNames(t *testing.T) {
 	for _, template := range coordTemplates {
 		fmt.Printf("\nTemplate: %s\n", template)
 		fmt.Println("Results:")
-		for i := 0; i < 5; i++ {
+		for range 5 {
 			alias, err := GenerateAlias(email, template)
 			if err != nil {
 				t.Errorf("Error generating alias with template %s: %v", template, err)
@@ -74,7 +74,7 @@ func TestGenerateNames(t *testing.T) {
 	for _, template := range lengthTemplates {
 		fmt.Printf("\nTemplate: %s\n", template)
 		fmt.Println("Results:")
-		for i := 0; i < 5; i++ {
+		for range 5 {
 			alias, err := GenerateAlias(email, template)
 			if err != nil {
 				t.Errorf("Error generating alias with template %s: %v", template, err)
@@ -106,17 +106,17 @@ func TestRandomWordGeneration(t *testing.T) {
 	fmt.Println("===============================")
 
 	fmt.Println("\nSingle Words:")
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		fmt.Printf("  %s\n", generateWords(1))
 	}
 
 	fmt.Println("\nTwo Words:")
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		fmt.Printf("  %s\n", generateWords(2))
 	}
 
 	fmt.Println("\nThree Words:")
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		fmt.Printf("  %s\n", generateWords(3))
 	}
 }
@@ -134,17 +134,17 @@ func TestNameGenerator(t *testing.T) {
 
 	// Generate random names of different lengths
 	fmt.Println("\nStandard Names (3-10 chars):")
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		fmt.Printf("  %s\n", generateName(3, 10))
 	}
 
 	fmt.Println("\nShort Names (3-5 chars):")
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		fmt.Printf("  %s\n", generateName(3, 5))
 	}
 
 	fmt.Println("\nLong Names (8-12 chars):")
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		fmt.Printf("  %s\n", generateName(8, 12))
 	}
 
@@ -152,7 +152,7 @@ func TestNameGenerator(t *testing.T) {
 	baseName := generateName(6, 8)
 	fmt.Printf("\nBase Name: %s\n", baseName)
 	fmt.Println("Variations:")
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		// Different change ratios
 		ratio := 0.2 + float64(i)*0.05
 		fmt.Printf("  %.2f: %s\n", ratio, generateNameVariation(baseName, ratio))
