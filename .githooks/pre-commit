@@ -1,0 +1,21 @@
+#!/bin/sh
+set -e
+
+go mod tidy -diff
+
+files=$(git diff --cached --name-only --diff-filter=ACM -- '*.go')
+[ -n "$files" ] || exit 0
+pkgs=$(echo "$files" | xargs -n1 dirname | sort -u | sed 's|^|./|')
+
+unformatted=$(gofmt -l $files)
+if [ -n "$unformatted" ]; then
+	echo "gofmt: $unformatted" >&2
+	exit 1
+fi
+
+go vet $pkgs
+go test -race $pkgs
+
+if command -v golangci-lint >/dev/null; then
+	golangci-lint run $pkgs
+fi

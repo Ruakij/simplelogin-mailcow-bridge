@@ -1,2 +1,10 @@
+/bin
+/dist
 .*
 !.gitignore
+!.githooks
+!.github
+!.dockerignore
+!.golangci.yml
+# Local assistant instructions, not part of the repository.
+/.github/instructions/

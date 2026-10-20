@@ -71,6 +71,8 @@ graph TD
 
 ### 2.1.2. Setup
 
+The image `ghcr.io/ruakij/simplelogin-mailcow-bridge` is published for `linux/amd64` and `linux/arm64` with the tags `latest`, `X.Y.Z`, `X.Y` and `X`.
+
 1. Use `docker-compose.yml` to set up the service:
 
 2. Configure environment variables in docker-compose.yml:
@@ -123,6 +125,11 @@ export MAILCOW_ALIAS_PUBLIC_COMMENT=simplelogin-mailcow-bridge
 4. Run the application:
 ```bash
 ./simplelogin-mailcow-bridge
+```
+
+To run gofmt, vet, tests and lint before each commit:
+```bash
+git config core.hooksPath .githooks
 ```
 
 <br>

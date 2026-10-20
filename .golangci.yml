@@ -1,0 +1,21 @@
+version: "2"
+
+linters:
+  enable:
+    - bodyclose
+    - contextcheck
+    - errorlint
+    - gocritic
+    - nilerr
+    - rowserrcheck
+    - unconvert
+    - wastedassign
+    - revive
+  settings:
+    revive:
+      rules:
+        - name: unused-parameter
+  exclusions:
+    presets:
+      # Close and os.Remove on cleanup paths, with nothing to report the error to.
+      - std-error-handling
