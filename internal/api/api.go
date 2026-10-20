@@ -60,7 +60,7 @@ func (a *API) Router() http.Handler {
 }
 
 func (a *API) routes() {
-	a.router.PathPrefix("/").Methods("OPTIONS").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	a.router.PathPrefix("/").Methods("OPTIONS").HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 	a.router.HandleFunc("/api/alias/random/new", a.handleNewAlias).Methods("POST")

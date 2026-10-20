@@ -516,15 +516,16 @@ func generateName(minLength, maxLength int) string {
 
 	// Start with either a common syllable, an initial consonant cluster, or a single consonant
 	startChoice := rand.Float64()
-	if startChoice < 0.5 {
+	switch {
+	case startChoice < 0.5:
 		// Use a common English syllable to start (50% chance)
 		result = commonSyllables[rand.Intn(len(commonSyllables))]
-	} else if startChoice < 0.8 {
+	case startChoice < 0.8:
 		// Use a common English initial consonant cluster (30% chance)
 		result = initialConsonantClusters[rand.Intn(len(initialConsonantClusters))]
 		// Add a vowel after the cluster
 		result += string(vowels[rand.Intn(len(vowels))])
-	} else {
+	default:
 		// Start with a single consonant followed by a vowel (20% chance)
 		result = string(consonants[rand.Intn(len(consonants))]) +
 			string(vowels[rand.Intn(len(vowels))])

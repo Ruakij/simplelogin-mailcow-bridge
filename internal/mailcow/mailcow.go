@@ -39,7 +39,7 @@ func NewMailcowClient(apiURL, apiKey string) (*MailcowClient, error) {
 
 	// Check API connectivity at startup
 	if err := mc.CheckAPIConnectivity(); err != nil {
-		return nil, fmt.Errorf("Mailcow API connectivity check failed: %w", err)
+		return nil, fmt.Errorf("mailcow API connectivity check failed: %w", err)
 	}
 
 	return mc, nil

@@ -36,11 +36,12 @@ func requestLogger(next http.Handler) http.Handler {
 		logMsg := fmt.Sprintf("[%s] %s %s %s - %d %s",
 			r.RemoteAddr, r.Method, r.RequestURI, r.Proto, rw.statusCode, durationFormatted)
 
-		if rw.statusCode >= 500 {
+		switch {
+		case rw.statusCode >= 500:
 			log.Error("%s", logMsg)
-		} else if rw.statusCode >= 400 {
+		case rw.statusCode >= 400:
 			log.Warn("%s", logMsg)
-		} else {
+		default:
 			log.Info("%s", logMsg)
 		}
 	})

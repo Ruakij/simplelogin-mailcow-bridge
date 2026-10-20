@@ -101,7 +101,7 @@ func TestGenerateAliasWithWordAndNumbers(t *testing.T) {
 	}
 }
 
-func TestRandomWordGeneration(t *testing.T) {
+func TestRandomWordGeneration(_ *testing.T) {
 	fmt.Println("\nRandom Word Generation Examples:")
 	fmt.Println("===============================")
 

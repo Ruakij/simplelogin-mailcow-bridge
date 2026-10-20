@@ -134,10 +134,10 @@ func (l *Logger) formatPrefix(level int) string {
 	var contextInfo strings.Builder
 
 	if l.requestID != "" {
-		contextInfo.WriteString(fmt.Sprintf("[%s] ", l.requestID))
+		fmt.Fprintf(&contextInfo, "[%s] ", l.requestID)
 	}
 	if l.component != "" {
-		contextInfo.WriteString(fmt.Sprintf("<%s> ", l.component))
+		fmt.Fprintf(&contextInfo, "<%s> ", l.component)
 	}
 
 	levelStr := levelNames[level]
@@ -163,7 +163,8 @@ func (l *Logger) log(level int, format string, args ...any) {
 		msg = format
 	}
 
-	l.stdLogger.Output(3, prefix+msg)
+	// A failed write to the log output has nowhere else to be reported.
+	_ = l.stdLogger.Output(3, prefix+msg)
 }
 
 // Debug logs a message at DEBUG level
@@ -263,11 +264,12 @@ func Fatal(format string, args ...any) {
 
 // FormatDuration returns a human-readable representation of a duration
 func FormatDuration(d time.Duration) string {
-	if d < time.Millisecond {
+	switch {
+	case d < time.Millisecond:
 		return fmt.Sprintf("%d µs", d.Microseconds())
-	} else if d < time.Second {
+	case d < time.Second:
 		return fmt.Sprintf("%.2f ms", float64(d.Microseconds())/1000)
-	} else if d < time.Minute {
+	case d < time.Minute:
 		return fmt.Sprintf("%.2f s", d.Seconds())
 	}
 	return fmt.Sprintf("%.2f m", d.Minutes())
