@@ -1,11 +1,12 @@
 # The golangci-lint version lives in hack/golangci-lint.version, which Dependabot
 # cannot parse. This bumps it and opens a PR.
 #
-# Events caused by GITHUB_TOKEN start no workflows. AUTOMATION_SSH_KEY is an optional
-# repository secret holding the private half of a deploy key with write access; the
-# branch is pushed over SSH with it, so pushes to an open PR run ci.yaml. Opening the PR
-# is still a GITHUB_TOKEN event, so a new PR gets its checks from a dispatched run on
-# its branch, as workflow_dispatch is the exception to that rule.
+# The new golangci-lint runs in its own job without credentials. Only the job that
+# opens the PR can write.
+#
+# Events caused by GITHUB_TOKEN start no workflows, except workflow_dispatch. After
+# every push to the PR branch the PR job therefore dispatches ci.yaml on that branch;
+# the run attaches its checks to the PR head commit.
 name: upstream-sync
 
 on:
@@ -13,21 +14,25 @@ on:
     - cron: "17 4 * * *"
   workflow_dispatch:
 
+concurrency:
+  group: upstream-sync-golangci-lint
+  cancel-in-progress: true
+
 permissions:
-  contents: write
-  pull-requests: write
-  actions: write
+  contents: read
 
 jobs:
-  golangci-lint:
+  lint:
     runs-on: ubuntu-latest
-    concurrency:
-      group: upstream-sync-golangci-lint
-      cancel-in-progress: true
+    outputs:
+      changed: ${{ steps.detect.outputs.changed }}
+      current: ${{ steps.detect.outputs.current }}
+      latest: ${{ steps.detect.outputs.latest }}
+      result: ${{ steps.lint.outcome }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ssh-key: ${{ secrets.AUTOMATION_SSH_KEY }}
+          persist-credentials: false
 
       - id: detect
         env:
@@ -36,12 +41,10 @@ jobs:
           set -euo pipefail
           current=$(cat hack/golangci-lint.version)
           latest=$(gh release view --repo golangci/golangci-lint --json tagName -q .tagName)
+          [[ "${latest}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
           echo "current=${current}" >> "$GITHUB_OUTPUT"
           echo "latest=${latest}" >> "$GITHUB_OUTPUT"
           [ "${current}" = "${latest}" ] && echo "changed=false" >> "$GITHUB_OUTPUT" || echo "changed=true" >> "$GITHUB_OUTPUT"
-
-      - if: steps.detect.outputs.changed == 'true'
-        run: echo "${{ steps.detect.outputs.latest }}" > hack/golangci-lint.version
 
       # A new release usually means new checks, so let the PR say whether we pass.
       - if: steps.detect.outputs.changed == 'true'
@@ -51,25 +54,51 @@ jobs:
         with:
           version: ${{ steps.detect.outputs.latest }}
 
-      - if: steps.detect.outputs.changed == 'true'
-        id: pr
+  pull-request:
+    needs: lint
+    if: needs.lint.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - env:
+          LATEST: ${{ needs.lint.outputs.latest }}
+        run: echo "${LATEST}" > hack/golangci-lint.version
+
+      - id: pr
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           branch: automation/golangci-lint-version-sync
           delete-branch: true
-          commit-message: "Bump golangci-lint to ${{ steps.detect.outputs.latest }}"
-          title: "Bump golangci-lint to ${{ steps.detect.outputs.latest }}"
+          commit-message: "Bump golangci-lint to ${{ needs.lint.outputs.latest }}"
+          title: "Bump golangci-lint to ${{ needs.lint.outputs.latest }}"
           body: |
             Automated golangci-lint upstream sync.
 
-            - Previous: `${{ steps.detect.outputs.current }}`
-            - New: `${{ steps.detect.outputs.latest }}`
+            - Previous: `${{ needs.lint.outputs.current }}`
+            - New: `${{ needs.lint.outputs.latest }}`
 
-            Result of running the new version against the tree: `${{ steps.lint.outcome }}`.
+            Result of running the new version against the tree: `${{ needs.lint.outputs.result }}`.
             A failure here is expected when a release adds checks; the findings are in the
             job log of the run that opened this PR.
 
-      - if: steps.pr.outputs.pull-request-operation == 'created'
+      # A push or a new PR starts no CI, so dispatch it. An unchanged branch gets a run
+      # only when none exists for its head yet, which retries a lost dispatch.
+      - if: steps.pr.outputs.pull-request-number != ''
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run ci.yaml --ref automation/golangci-lint-version-sync
+          OPERATION: ${{ steps.pr.outputs.pull-request-operation }}
+          SHA: ${{ steps.pr.outputs.pull-request-head-sha }}
+          BRANCH: automation/golangci-lint-version-sync
+        run: |
+          set -euo pipefail
+          if [ "${OPERATION}" = none ] && [ "$(gh run list --workflow ci.yaml --commit "${SHA}" --json databaseId -q length)" != 0 ]; then
+            exit 0
+          fi
+          gh workflow run ci.yaml --ref "${BRANCH}"
