@@ -1,6 +1,13 @@
 services:
   simplelogin-mailcow-bridge:
     image: ghcr.io/ruakij/simplelogin-mailcow-bridge:latest
+    user: "65532:65532"
+    # The bridge keeps all state in memory and writes no files.
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     ports:
       - "8080:8080"
     environment:
